@@ -9,6 +9,7 @@ pub mod blocks;
 pub mod chunk;
 pub mod env;
 pub mod inventory;
+pub mod meshify_custom_meshes;
 pub mod player;
 pub mod terrain;
 pub mod utils;

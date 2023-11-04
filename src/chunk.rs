@@ -25,20 +25,18 @@ pub const RENDER_DISTANCE: i32 = 10;
 const DEFAULT_PBS: PbsParameters = PbsParameters {
     pbs_value: 0.4,
     min: 0.25,
-    smoothing: PbsSmoothing::Low,
+    smoothing: PbsSmoothing::High,
 };
 
 pub type ChunkArr = [Block; CHUNK_TOTAL_BLOCKS];
 pub type ChunkCords = [i32; 2];
+pub type XSpriteMetaData = Box<[(usize, usize, u32, u32); CHUNK_TOTAL_BLOCKS]>;
 
 #[derive(Component)]
 pub struct Cords(pub ChunkCords);
 
 #[derive(Component)]
 pub struct Grid(pub ChunkArr);
-
-#[derive(Component)]
-pub struct MetaData(RwLock<MeshMD<Block>>);
 
 #[derive(Component)]
 pub struct Chunk;
@@ -50,10 +48,16 @@ pub struct ChunkCloseToPlayer;
 pub struct ToIntroduce(pub Vec<(ChunkCords, Face)>);
 
 #[derive(Component)]
-pub struct MainCulledMesh;
+pub struct MainCulledMesh(RwLock<MeshMD<Block>>);
+
+#[derive(Component)]
+pub struct XSpriteMesh(RwLock<XSpriteMetaData>);
 
 #[derive(Resource)]
 pub struct BlockMaterial(Handle<StandardMaterial>);
+
+#[derive(Resource)]
+pub struct XSpriteMaterial(Handle<StandardMaterial>);
 
 #[derive(Resource, Default)]
 pub struct ChunkMap {
@@ -105,14 +109,25 @@ fn setup_texture(
     asset_server: Res<AssetServer>,
 ) {
     let texture_handle = asset_server.load("blocks.png");
-    let mat = materials.add(StandardMaterial {
-        base_color_texture: Some(texture_handle),
+    let blocks_mat = materials.add(StandardMaterial {
+        base_color_texture: Some(texture_handle.clone()),
         reflectance: 0.0,
-        alpha_mode: AlphaMode::Mask(0.0),
-        perceptual_roughness: 0.75,
+        alpha_mode: AlphaMode::Mask(0.3),
+        perceptual_roughness: 0.85,
         ..default()
     });
-    commands.insert_resource(BlockMaterial(mat));
+    commands.insert_resource(BlockMaterial(blocks_mat));
+
+    let xsprite_mat = materials.add(StandardMaterial {
+        base_color_texture: Some(texture_handle),
+        reflectance: 0.0,
+        alpha_mode: AlphaMode::Mask(0.1),
+        perceptual_roughness: 0.85,
+        cull_mode: None,
+        double_sided: true,
+        ..default()
+    });
+    commands.insert_resource(XSpriteMaterial(xsprite_mat));
 }
 
 fn update_chunks_close_to_player(

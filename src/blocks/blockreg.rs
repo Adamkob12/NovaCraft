@@ -1,18 +1,11 @@
-use super::Block;
+use super::{xsprite_mesh::generate_xsprite_mesh, *};
 use crate::prelude::*;
-
-const VOXEL_DIMS: [f32; 3] = [1.0, 1.0, 1.0];
-const VOXEL_CENTER: [f32; 3] = [0.0, 0.0, 0.0];
-const TEXTURE_ATLAS_DIMS: [u32; 2] = [10, 10];
-const PADDING: f32 = 1.0 / 16.0;
-const COLOR_INTENSITY: f32 = 1.0;
-const ALPHA: f32 = 1.0;
-
 #[derive(Resource, Clone)]
 pub struct BlockRegistry {
     dirt_mesh: Mesh,
     grass_mesh: Mesh,
     stone_mesh: Mesh,
+    greenery_mesh: Mesh,
 }
 
 impl VoxelRegistry for BlockRegistry {
@@ -23,11 +16,7 @@ impl VoxelRegistry for BlockRegistry {
             Block::GRASS => VoxelMesh::NormalCube(&self.grass_mesh),
             Block::STONE => VoxelMesh::NormalCube(&self.stone_mesh),
             Block::DIRT => VoxelMesh::NormalCube(&self.dirt_mesh),
-            #[allow(unreachable_patterns)]
-            _ => panic!(
-                "Block type {:?} is not supported in the Block Registry.",
-                *voxel
-            ),
+            Block::GREENERY => VoxelMesh::CustomMesh(&self.greenery_mesh),
         }
     }
 
@@ -49,7 +38,7 @@ impl VoxelRegistry for BlockRegistry {
     }
 
     fn is_covering(&self, voxel: &Self::Voxel, _side: prelude::Face) -> bool {
-        *voxel != Block::AIR
+        *voxel != Block::AIR && *voxel != Block::GREENERY
     }
 }
 
@@ -67,6 +56,7 @@ impl Default for BlockRegistry {
                     (Back, [2, 0]),
                     (Forward, [2, 0]),
                 ],
+                VOXEL_CENTER,
                 PADDING,
                 Some(COLOR_INTENSITY),
                 ALPHA,
@@ -82,6 +72,7 @@ impl Default for BlockRegistry {
                     (Back, [1, 0]),
                     (Forward, [1, 0]),
                 ],
+                VOXEL_CENTER,
                 PADDING,
                 Some(COLOR_INTENSITY),
                 ALPHA,
@@ -97,9 +88,20 @@ impl Default for BlockRegistry {
                     (Back, [3, 0]),
                     (Forward, [3, 0]),
                 ],
+                VOXEL_CENTER,
                 PADDING,
                 Some(COLOR_INTENSITY),
                 ALPHA,
+            ),
+            greenery_mesh: generate_xsprite_mesh(
+                VOXEL_DIMS,
+                TEXTURE_ATLAS_DIMS,
+                [4, 0],
+                VOXEL_CENTER,
+                PADDING,
+                Some(COLOR_INTENSITY),
+                ALPHA,
+                GREENERY_SCALE,
             ),
         }
     }

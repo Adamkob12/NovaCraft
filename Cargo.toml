@@ -10,3 +10,4 @@ bevy = "0.11.3"
 bevy_meshem = {git = "https://github.com/Adamkob12/bevy_meshem.git"}
 futures-lite = "1.13.0"
 noise = "0.8.2"
+rand = "0.8.5"

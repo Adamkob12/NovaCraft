@@ -1,6 +1,7 @@
-use super::{ChunkCords, ChunkMap, CHUNK_TOTAL_BLOCKS, HEIGHT};
+use super::{ChunkCords, ChunkMap, XSpriteMetaData, CHUNK_TOTAL_BLOCKS, HEIGHT};
 use crate::blocks::blockreg::BlockRegistry;
 use crate::chunk::{Block, CHUNK_DIMS};
+use crate::meshify_custom_meshes::meshify_custom_meshes;
 use crate::prelude::*;
 use crate::terrain::generate_flat_chunk;
 use bevy::tasks::{AsyncComputeTaskPool, Task};
@@ -16,7 +17,14 @@ pub struct ChunkQueue {
 
 #[derive(Component)]
 pub struct ComputeChunk(
-    pub Task<Option<((Mesh, MeshMD<Block>), [Block; CHUNK_TOTAL_BLOCKS], [i32; 2])>>,
+    pub  Task<
+        Option<(
+            (Mesh, MeshMD<Block>),
+            [Block; CHUNK_TOTAL_BLOCKS],
+            [i32; 2],
+            (Mesh, XSpriteMetaData),
+        )>,
+    >,
 );
 
 impl ChunkQueue {
@@ -28,7 +36,7 @@ impl ChunkQueue {
         &mut self,
         chunk_map: &mut ChunkMap,
         mut commands: Commands,
-        breg: Arc<BlockRegistry>,
+        breg: &Arc<BlockRegistry>,
         condition: Option<F>,
     ) {
         if self.queue.is_empty() {
@@ -45,13 +53,13 @@ impl ChunkQueue {
                 continue;
             }
 
-            let breg = Arc::clone(&breg);
             let cords = *cords;
             if let Some(ref condition) = condition {
                 if !condition(&cords) {
                     continue;
                 }
             }
+            let breg = Arc::clone(breg);
             chunk_map.pos_to_ent.insert(cords, Entity::PLACEHOLDER);
             task = thread_pool.spawn(async move {
                 let grid = generate_flat_chunk(HEIGHT / 2);
@@ -67,7 +75,8 @@ impl ChunkQueue {
                         smoothing: PbsSmoothing::Low,
                     }),
                 )?;
-                Some((t, grid, cords))
+                let custom_voxel_meshes = meshify_custom_meshes(breg.as_ref(), &grid, CHUNK_DIMS);
+                Some((t, grid, cords, custom_voxel_meshes))
             });
             commands.spawn(ComputeChunk(task));
         }

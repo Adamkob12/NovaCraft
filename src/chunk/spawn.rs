@@ -1,4 +1,4 @@
-use crate::{blocks::blockreg::BlockRegistry, utils::chunk_distance};
+use crate::{blocks::blockreg::BlockRegistry, chunk::XSpriteMesh, utils::chunk_distance};
 
 use super::{chunk_queue::ChunkQueue, *};
 
@@ -46,7 +46,7 @@ pub fn dequeue_all_chunks(
     chunk_queue.dequeue_all(
         &mut chunk_map,
         commands,
-        breg,
+        &breg,
         Some(|x: &[i32; 2]| chunk_distance(*x, current_chunk.0) < render_settings.render_distance),
     );
 }
@@ -56,13 +56,14 @@ pub fn handle_chunk_spawn_tasks(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     blocks_mat: Res<BlockMaterial>,
+    xsprite_mat: Res<XSpriteMaterial>,
     current_chunk: Res<CurrentChunk>,
     mut chunk_map: ResMut<ChunkMap>,
     render_settings: Res<RenderSettings>,
 ) {
     let current_chunk_cords = current_chunk.0;
     for (ent, mut task) in task_query.iter_mut() {
-        if let Some(Some(((culled_mesh, metadata), grid, cords))) =
+        if let Some(Some(((culled_mesh, metadata), grid, cords, (xsprite_mesh, data)))) =
             futures_lite::future::block_on(futures_lite::future::poll_once(&mut task.0))
         {
             // Remove the task so we don't poll it again
@@ -77,6 +78,7 @@ pub fn handle_chunk_spawn_tasks(
             }
             if let Some(chunk_entity) = chunk_map.pos_to_ent.get_mut(&cords) {
                 let culled_mesh_handle = meshes.add(culled_mesh);
+                let xsprite_mesh_handle = meshes.add(xsprite_mesh);
                 let transform = Transform::from_xyz(
                     (cords[0] * WIDTH as i32) as f32,
                     0.0,
@@ -87,7 +89,6 @@ pub fn handle_chunk_spawn_tasks(
                         Chunk,
                         Grid(grid),
                         Cords(cords),
-                        MetaData(metadata.into()),
                         ChunkCloseToPlayer,
                         ToIntroduce(vec![
                             (get_neighboring_chunk_cords(cords, Right), Right),
@@ -101,9 +102,9 @@ pub fn handle_chunk_spawn_tasks(
                         },
                     ))
                     .id();
-                let child = commands
+                let culled_mesh_child = commands
                     .spawn((
-                        MainCulledMesh,
+                        MainCulledMesh(metadata.into()),
                         PbrBundle {
                             mesh: culled_mesh_handle,
                             material: blocks_mat.0.clone(),
@@ -111,7 +112,19 @@ pub fn handle_chunk_spawn_tasks(
                         },
                     ))
                     .id();
-                commands.entity(entity).push_children(&[child]);
+                let xsprite_mesh_child = commands
+                    .spawn((
+                        PbrBundle {
+                            mesh: xsprite_mesh_handle,
+                            material: xsprite_mat.0.clone(),
+                            ..Default::default()
+                        },
+                        XSpriteMesh(RwLock::new(data)),
+                    ))
+                    .id();
+                commands
+                    .entity(entity)
+                    .push_children(&[culled_mesh_child, xsprite_mesh_child]);
                 *chunk_entity = entity;
                 println!("Spawned: {:?}", cords);
             }

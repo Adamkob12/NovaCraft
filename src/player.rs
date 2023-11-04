@@ -103,6 +103,7 @@ fn cursor_grab(
         warn!("Primary window not found for `cursor_grab`!");
     }
 }
+
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
