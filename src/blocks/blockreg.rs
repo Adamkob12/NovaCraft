@@ -1,5 +1,6 @@
 use super::{xsprite_mesh::generate_xsprite_mesh, *};
 use crate::prelude::*;
+
 #[derive(Resource, Clone)]
 pub struct BlockRegistry {
     dirt_mesh: Mesh,
@@ -103,6 +104,39 @@ impl Default for BlockRegistry {
                 ALPHA,
                 GREENERY_SCALE,
             ),
+        }
+    }
+}
+
+pub enum Collision {
+    NoEffect,
+    CompleteStop,
+    SpeedChange { change: f32 },
+}
+
+pub enum Breakable {
+    NotBreakable,
+    Breakable { durabillity: usize },
+}
+
+impl BlockRegistry {
+    pub fn is_breakable(block: &Block) -> Breakable {
+        match *block {
+            Block::AIR => Breakable::NotBreakable,
+            Block::GRASS => Breakable::Breakable { durabillity: 100 },
+            Block::DIRT => Breakable::Breakable { durabillity: 70 },
+            Block::STONE => Breakable::Breakable { durabillity: 250 },
+            Block::GREENERY => Breakable::Breakable { durabillity: 0 },
+        }
+    }
+
+    pub fn on_collision(block: &Block) -> Collision {
+        match *block {
+            Block::AIR => Collision::NoEffect,
+            Block::GRASS => Collision::CompleteStop,
+            Block::STONE => Collision::CompleteStop,
+            Block::DIRT => Collision::CompleteStop,
+            Block::GREENERY => Collision::SpeedChange { change: 0.85 },
         }
     }
 }

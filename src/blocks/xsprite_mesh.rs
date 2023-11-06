@@ -23,8 +23,8 @@ pub fn generate_xsprite_mesh(
     let nz = voxel_center[2] - voxel_dims[2] / 2.0 * scale;
     let x = voxel_center[0] + voxel_dims[0] / 2.0 * scale;
     let nx = voxel_center[0] - voxel_dims[0] / 2.0 * scale;
-    let y = voxel_center[1] + voxel_dims[1] / 2.0 * scale;
-    let ny = voxel_center[1] - voxel_dims[1] / 2.0 * scale;
+    let y = voxel_center[1] + voxel_dims[1] / 2.0;
+    let ny = voxel_center[1] - voxel_dims[1] / 2.0;
 
     let u: f32 = 1.0 / (texture_atlas_dims[0] as f32);
     let v: f32 = 1.0 / (texture_atlas_dims[1] as f32);
@@ -86,14 +86,14 @@ pub fn generate_xsprite_mesh(
     mesh.insert_attribute(
         Mesh::ATTRIBUTE_NORMAL,
         vec![
-            [0.5, 0.0, 0.5],
-            [0.5, 0.0, 0.5],
-            [0.5, 0.0, 0.5],
-            [0.5, 0.0, 0.5],
-            [0.5, 0.0, -0.5],
-            [0.5, 0.0, -0.5],
-            [0.5, 0.0, -0.5],
-            [0.5, 0.0, -0.5],
+            [0.8, 0.0, 0.8],
+            [0.8, 0.0, 0.8],
+            [0.8, 0.0, 0.8],
+            [0.8, 0.0, 0.8],
+            [-0.8, 0.0, 0.8],
+            [-0.8, 0.0, 0.8],
+            [-0.8, 0.0, 0.8],
+            [-0.8, 0.0, 0.8],
         ],
     );
 

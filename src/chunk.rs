@@ -13,14 +13,14 @@ use introduce::*;
 use spawn::*;
 
 // Number of blocks along the y axis
-pub const HEIGHT: usize = 64;
+pub const HEIGHT: usize = 56;
 // Number of blocks along the z axis
-pub const LENGTH: usize = 16;
+pub const LENGTH: usize = 20;
 // Number of blocks along the x axis
-pub const WIDTH: usize = 16;
+pub const WIDTH: usize = 20;
 pub const CHUNK_DIMS: (usize, usize, usize) = (WIDTH, HEIGHT, LENGTH);
 pub const CHUNK_TOTAL_BLOCKS: usize = HEIGHT * LENGTH * WIDTH;
-pub const RENDER_DISTANCE: i32 = 10;
+pub const RENDER_DISTANCE: i32 = 12;
 
 const DEFAULT_PBS: PbsParameters = PbsParameters {
     pbs_value: 0.4,
@@ -64,7 +64,7 @@ pub struct ChunkMap {
     pub pos_to_ent: HashMap<[i32; 2], Entity>,
 }
 
-#[derive(Resource)]
+#[derive(Resource, PartialEq)]
 pub struct CurrentChunk(pub ChunkCords);
 
 #[derive(Resource)]

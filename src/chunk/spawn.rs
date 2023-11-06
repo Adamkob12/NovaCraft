@@ -26,7 +26,6 @@ pub fn queue_spawn_despawn_chunks(
     for u in -render_distance..=render_distance {
         for v in -render_distance..=render_distance {
             let cords = [current_chunk[0] + u, current_chunk[1] + v];
-            println!("Queued Spawn: {:?}", cords);
             if !chunk_map.pos_to_ent.contains_key(&cords) {
                 chunk_queue.enqueue(cords);
             }
@@ -126,7 +125,6 @@ pub fn handle_chunk_spawn_tasks(
                     .entity(entity)
                     .push_children(&[culled_mesh_child, xsprite_mesh_child]);
                 *chunk_entity = entity;
-                println!("Spawned: {:?}", cords);
             }
         }
     }

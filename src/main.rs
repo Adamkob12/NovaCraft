@@ -5,6 +5,7 @@ pub mod prelude {
     pub use bevy_meshem::prelude::*;
 }
 
+pub mod action;
 pub mod blocks;
 pub mod chunk;
 pub mod env;

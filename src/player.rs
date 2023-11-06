@@ -38,8 +38,8 @@ pub struct MovementSettings {
 impl Default for MovementSettings {
     fn default() -> Self {
         Self {
-            sensitivity: 0.00008,
-            speed: 15.,
+            sensitivity: 0.00012,
+            speed: 40.,
         }
     }
 }

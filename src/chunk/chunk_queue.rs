@@ -3,10 +3,12 @@ use crate::blocks::blockreg::BlockRegistry;
 use crate::chunk::{Block, CHUNK_DIMS};
 use crate::meshify_custom_meshes::meshify_custom_meshes;
 use crate::prelude::*;
-use crate::terrain::generate_flat_chunk;
+use crate::terrain::{generate_chunk, generate_flat_chunk};
 use bevy::tasks::{AsyncComputeTaskPool, Task};
 use noise::Perlin;
 use std::sync::Arc;
+
+const NOISE_SEED: u32 = 10321090;
 
 #[derive(Resource, Default)]
 pub struct ChunkQueue {
@@ -42,6 +44,7 @@ impl ChunkQueue {
         if self.queue.is_empty() {
             return;
         }
+        let noise = Perlin::new(NOISE_SEED);
         let thread_pool = AsyncComputeTaskPool::get();
         for cords in self.queue.as_slice() {
             let task;
@@ -62,7 +65,8 @@ impl ChunkQueue {
             let breg = Arc::clone(breg);
             chunk_map.pos_to_ent.insert(cords, Entity::PLACEHOLDER);
             task = thread_pool.spawn(async move {
-                let grid = generate_flat_chunk(HEIGHT / 2);
+                // let grid = generate_flat_chunk(HEIGHT / 2);
+                let grid = generate_chunk(cords, &noise);
                 let t = mesh_grid(
                     CHUNK_DIMS,
                     &[Bottom /* , Forward, Back, Right, Left */],
