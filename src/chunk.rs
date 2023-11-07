@@ -13,7 +13,7 @@ use introduce::*;
 use spawn::*;
 
 // Number of blocks along the y axis
-pub const HEIGHT: usize = 56;
+pub const HEIGHT: usize = 40;
 // Number of blocks along the z axis
 pub const LENGTH: usize = 20;
 // Number of blocks along the x axis

@@ -20,33 +20,6 @@ pub(super) fn initial_grab_cursor(mut primary_window: Query<&mut Window, With<Pr
     }
 }
 
-/// Spawns the `Camera3dBundle` to be controlled
-pub(super) fn setup_player(mut commands: Commands) {
-    commands
-        .spawn((
-            Camera3dBundle {
-                transform: Transform::from_xyz(
-                    // -RENDER_DISTANCE as f32 * WIDTH as f32,
-                    0.0,
-                    HEIGHT as f32 * 2.0, // -RENDER_DISTANCE as f32 * LENGTH as f32,
-                    0.0,
-                )
-                .looking_to(Vec3::new(5.0, -1.0, 5.0), Vec3::Y),
-                ..Default::default()
-            },
-            Cage {
-                blocks: [Block::AIR; CAGE_LEN],
-            },
-            FlyCam,
-        ))
-        .insert(ScreenSpaceAmbientOcclusionBundle {
-            settings: ScreenSpaceAmbientOcclusionSettings {
-                quality_level: ScreenSpaceAmbientOcclusionQualityLevel::High,
-            },
-            ..Default::default()
-        });
-}
-
 /// Handles keyboard input and movement
 pub(super) fn player_move(
     keys: Res<Input<KeyCode>>,

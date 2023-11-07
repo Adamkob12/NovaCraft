@@ -15,6 +15,7 @@ pub mod player;
 pub mod terrain;
 pub mod utils;
 
+use bevy::window::WindowResolution;
 use blocks::blockreg::BlockRegistry;
 use prelude::*;
 
@@ -28,6 +29,7 @@ fn main() {
                 primary_window: Some(Window {
                     resizable: false,
                     mode: bevy::window::WindowMode::Windowed,
+                    resolution: WindowResolution::new(1600.0, 900.0),
                     ..Default::default()
                 }),
                 ..Default::default()

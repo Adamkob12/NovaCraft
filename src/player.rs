@@ -2,9 +2,11 @@ pub mod cage;
 pub mod movement;
 
 use crate::blocks::Block;
-use crate::chunk::ChunkCloseToPlayer;
 use crate::chunk::CurrentChunk;
 use crate::chunk::CHUNK_DIMS;
+use crate::chunk::RENDER_DISTANCE;
+use crate::chunk::WIDTH;
+use crate::chunk::{ChunkCloseToPlayer, HEIGHT};
 use crate::prelude::*;
 use bevy::ecs::event::{Events, ManualEventReader};
 use bevy::input::mouse::MouseMotion;
@@ -39,7 +41,7 @@ impl Default for MovementSettings {
     fn default() -> Self {
         Self {
             sensitivity: 0.00012,
-            speed: 40.,
+            speed: 25.,
         }
     }
 }
@@ -68,6 +70,42 @@ impl Default for KeyBindings {
             toggle_grab_cursor: KeyCode::Escape,
         }
     }
+}
+
+/// Spawns the `Camera3dBundle` to be controlled
+pub(super) fn setup_player(mut commands: Commands) {
+    commands
+        .spawn((
+            Camera3dBundle {
+                transform: Transform::from_xyz(
+                    // -RENDER_DISTANCE as f32 * WIDTH as f32,
+                    0.0,
+                    HEIGHT as f32 * 2.0, // -RENDER_DISTANCE as f32 * LENGTH as f32,
+                    0.0,
+                )
+                .looking_to(Vec3::new(5.0, -1.0, 5.0), Vec3::Y),
+                ..Default::default()
+            },
+            Cage {
+                blocks: [Block::AIR; CAGE_LEN],
+            },
+            FlyCam,
+        ))
+        .insert(FogSettings {
+            color: Color::rgb(0.55, 0.95, 1.0),
+            falloff: FogFalloff::Linear {
+                start: ((RENDER_DISTANCE) * WIDTH as i32) as f32,
+                end: ((RENDER_DISTANCE + 1) * WIDTH as i32) as f32,
+            },
+            ..Default::default()
+        })
+        .insert(TemporalAntiAliasBundle::default())
+        .insert(ScreenSpaceAmbientOcclusionBundle {
+            settings: ScreenSpaceAmbientOcclusionSettings {
+                quality_level: ScreenSpaceAmbientOcclusionQualityLevel::High,
+            },
+            ..Default::default()
+        });
 }
 
 /// Used in queries when you want flycams and not other cameras
