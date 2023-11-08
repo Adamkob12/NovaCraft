@@ -40,8 +40,8 @@ pub struct MovementSettings {
 impl Default for MovementSettings {
     fn default() -> Self {
         Self {
-            sensitivity: 0.00004,
-            speed: 25.,
+            sensitivity: 0.000037,
+            speed: 18.,
         }
     }
 }
@@ -92,7 +92,7 @@ pub(super) fn setup_player(mut commands: Commands) {
             FlyCam,
         ))
         .insert(FogSettings {
-            color: Color::rgb(0.55, 0.95, 1.0),
+            color: Color::rgb(0.85, 0.95, 1.0),
             falloff: FogFalloff::Linear {
                 start: ((RENDER_DISTANCE) * WIDTH as i32) as f32,
                 end: ((RENDER_DISTANCE + 1) * WIDTH as i32) as f32,

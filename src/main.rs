@@ -29,7 +29,7 @@ fn main() {
                 primary_window: Some(Window {
                     resizable: false,
                     mode: bevy::window::WindowMode::Windowed,
-                    resolution: WindowResolution::new(1600.0, 900.0),
+                    resolution: WindowResolution::new(1200.0, 700.0),
                     ..Default::default()
                 }),
                 ..Default::default()

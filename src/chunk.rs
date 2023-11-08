@@ -24,9 +24,9 @@ pub const CHUNK_TOTAL_BLOCKS: usize = HEIGHT * LENGTH * WIDTH;
 pub const RENDER_DISTANCE: i32 = 12;
 
 const DEFAULT_PBS: PbsParameters = PbsParameters {
-    pbs_value: 0.3,
-    min: 0.1,
-    smoothing: PbsSmoothing::Disabled,
+    pbs_value: 0.1,
+    min: 0.25,
+    smoothing: PbsSmoothing::Low,
 };
 
 pub type ChunkArr = [Block; CHUNK_TOTAL_BLOCKS];

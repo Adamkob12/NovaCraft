@@ -5,7 +5,7 @@ use noise::{NoiseFn, Perlin};
 use rand::prelude::*;
 pub const NOISE_SEED: usize = 10;
 pub const NOISE_SEED_SQRD: usize = NOISE_SEED * NOISE_SEED;
-pub const NOISE_FACTOR_CONT: f64 = 0.012;
+pub const NOISE_FACTOR_CONT: f64 = 0.014;
 pub const NOISE_FACTOR_SCALE: f64 = 2.1;
 
 // Generate chunk from noise
