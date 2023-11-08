@@ -1,13 +1,16 @@
 use crate::chunk::ChunkCords;
 use crate::prelude::*;
 
-pub fn get_neighboring_chunk_cords(cords: ChunkCords, face: Face) -> ChunkCords {
+pub fn get_neighboring_chunk_cords(cords: ChunkCords, face: Direction) -> ChunkCords {
     match face {
-        Right => [cords[0] + 1, cords[1]],
-        Left => [cords[0] - 1, cords[1]],
-        Back => [cords[0], cords[1] + 1],
-        Forward => [cords[0], cords[1] - 1],
-        _ => panic!("Stacking chunks vertically not supported."),
+        East => [cords[0] + 1, cords[1]],
+        West => [cords[0] - 1, cords[1]],
+        North => [cords[0], cords[1] + 1],
+        South => [cords[0], cords[1] - 1],
+        NoEast => [cords[0] + 1, cords[1] + 1],
+        NoWest => [cords[0] - 1, cords[1] + 1],
+        SoEast => [cords[0] + 1, cords[1] - 1],
+        SoWest => [cords[0] - 1, cords[1] - 1],
     }
 }
 

@@ -51,6 +51,14 @@ pub struct AdjChunkGrids {
     pub east: Option<Arc<RwLock<ChunkArr>>>,
     // -x
     pub west: Option<Arc<RwLock<ChunkArr>>>,
+    // +z
+    pub no_east: Option<Arc<RwLock<ChunkArr>>>,
+
+    pub no_west: Option<Arc<RwLock<ChunkArr>>>,
+
+    pub so_east: Option<Arc<RwLock<ChunkArr>>>,
+
+    pub so_west: Option<Arc<RwLock<ChunkArr>>>,
 }
 
 #[derive(Component)]
@@ -63,7 +71,7 @@ pub struct Chunk;
 pub struct ChunkCloseToPlayer;
 
 #[derive(Component)]
-pub struct ToIntroduce(pub Vec<(ChunkCords, Face)>);
+pub struct ToIntroduce(pub Vec<(ChunkCords, Direction)>);
 
 #[derive(Component)]
 pub struct MainCulledMesh(RwLock<MeshMD<Block>>);
@@ -121,7 +129,7 @@ impl Plugin for ChunkPlugin {
             PostUpdate,
             (
                 connect_chunks.run_if(not(any_with_component::<ComputeChunk>())),
-                introduce_neighboring_chunks,
+                introduce_neighboring_chunks.run_if(not(any_with_component::<ComputeChunk>())),
             ),
         )
         .add_systems(PostStartup, setup_texture);
@@ -192,8 +200,8 @@ fn connect_chunks(
         if p > 0.2 {
             continue;
         }
-        for direction in 2..6 {
-            let direction = Face::from(direction);
+        for direction in 1..9 {
+            let direction = Direction::from(direction);
             let adj_chunk_cords = get_neighboring_chunk_cords(cords.0, direction);
             if let Some(adj_entity) = chunk_map.pos_to_ent.get(&adj_chunk_cords) {
                 if *adj_entity == Entity::PLACEHOLDER {
@@ -201,11 +209,14 @@ fn connect_chunks(
                 }
                 if let Ok(Grid(adj_grid)) = chunk_grid_query.get(*adj_entity) {
                     match direction {
-                        Back => adj_chunk_grids.north = Some(Arc::clone(adj_grid)),
-                        Forward => adj_chunk_grids.south = Some(Arc::clone(adj_grid)),
-                        Right => adj_chunk_grids.east = Some(Arc::clone(adj_grid)),
-                        Left => adj_chunk_grids.west = Some(Arc::clone(adj_grid)),
-                        _ => unreachable!(),
+                        North => adj_chunk_grids.north = Some(Arc::clone(adj_grid)),
+                        South => adj_chunk_grids.south = Some(Arc::clone(adj_grid)),
+                        East => adj_chunk_grids.east = Some(Arc::clone(adj_grid)),
+                        West => adj_chunk_grids.west = Some(Arc::clone(adj_grid)),
+                        NoEast => adj_chunk_grids.no_east = Some(Arc::clone(adj_grid)),
+                        NoWest => adj_chunk_grids.no_west = Some(Arc::clone(adj_grid)),
+                        SoEast => adj_chunk_grids.so_east = Some(Arc::clone(adj_grid)),
+                        SoWest => adj_chunk_grids.so_west = Some(Arc::clone(adj_grid)),
                     }
                 }
                 if adj_chunk_grids.north.is_some()

@@ -19,25 +19,33 @@ pub(super) fn introduce_neighboring_chunks(
         if p > 0.1 {
             continue;
         }
-        let mut to_remove = [false; 6];
+        let mut to_remove = [false; 8];
         for (_adj_cords, direction) in to_introduce.0.iter() {
             'A: for child in children {
                 if let Ok((mesh_handle, MainCulledMesh(metadata))) = mesh_query.get(*child) {
                     let mesh_ref_mut = meshes.get_mut(mesh_handle).unwrap();
                     if let Some(adj_grid) = match direction {
-                        Back => &adj_chunk_grids.north,
-                        Forward => &adj_chunk_grids.south,
-                        Right => &adj_chunk_grids.east,
-                        Left => &adj_chunk_grids.west,
-                        _ => unreachable!(),
+                        North => &adj_chunk_grids.north,
+                        South => &adj_chunk_grids.south,
+                        East => &adj_chunk_grids.east,
+                        West => &adj_chunk_grids.west,
+                        NoEast => &adj_chunk_grids.no_east,
+                        NoWest => &adj_chunk_grids.no_west,
+                        SoEast => &adj_chunk_grids.so_east,
+                        SoWest => &adj_chunk_grids.so_west,
                     } {
-                        introduce_adjacent_chunks(
-                            Arc::clone(&breg).as_ref(),
-                            mesh_ref_mut,
-                            &mut metadata.write().expect("a"),
-                            *direction,
-                            adj_grid.read().expect("b").as_ref(),
-                        );
+                        match direction {
+                            North | South | West | East => {
+                                introduce_adjacent_chunks(
+                                    Arc::clone(&breg).as_ref(),
+                                    mesh_ref_mut,
+                                    &mut metadata.write().expect("a"),
+                                    (*direction).into(),
+                                    adj_grid.read().expect("b").as_ref(),
+                                );
+                            }
+                            _ => {}
+                        }
                         apply_pbs_with_connected_chunks(
                             Arc::clone(&breg).as_ref(),
                             mesh_ref_mut,
@@ -50,6 +58,10 @@ pub(super) fn introduce_neighboring_chunks(
                             adj_chunk_grids.south.as_ref(),
                             adj_chunk_grids.east.as_ref(),
                             adj_chunk_grids.west.as_ref(),
+                            adj_chunk_grids.no_east.as_ref(),
+                            adj_chunk_grids.no_west.as_ref(),
+                            adj_chunk_grids.so_east.as_ref(),
+                            adj_chunk_grids.so_west.as_ref(),
                         );
                         break 'A;
                     } else {

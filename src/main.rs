@@ -1,5 +1,6 @@
 #![allow(dead_code, unused_imports)]
 pub mod prelude {
+    pub use crate::direction::{Direction, Direction::*};
     pub use bevy::prelude::*;
     pub use bevy::render::mesh::*;
     pub use bevy_meshem::prelude::*;
@@ -8,6 +9,7 @@ pub mod prelude {
 pub mod action;
 pub mod blocks;
 pub mod chunk;
+pub mod direction;
 pub mod env;
 pub mod inventory;
 pub mod meshify_custom_meshes;
