@@ -1,6 +1,7 @@
 #![allow(dead_code, unused_imports)]
 pub mod prelude {
     pub use crate::direction::{Direction, Direction::*};
+    pub use crate::helper_ecs_utils::*;
     pub use bevy::prelude::*;
     pub use bevy::render::mesh::*;
     pub use bevy_meshem::prelude::*;
@@ -11,6 +12,7 @@ pub mod blocks;
 pub mod chunk;
 pub mod direction;
 pub mod env;
+pub mod helper_ecs_utils;
 pub mod inventory;
 pub mod meshify_custom_meshes;
 pub mod player;
@@ -19,6 +21,7 @@ pub mod utils;
 
 use bevy::window::WindowResolution;
 use blocks::blockreg::BlockRegistry;
+use helper_ecs_utils::*;
 use prelude::*;
 
 fn main() {
@@ -39,6 +42,7 @@ fn main() {
         chunk::ChunkPlugin,
         player::PlayerPlugin,
         env::EnviornmentPlugin,
+        helper_ecs_utils::HelperEcsUtilsPlugin,
     ))
     .init_resource::<BlockRegistry>();
 

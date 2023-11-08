@@ -24,8 +24,8 @@ pub const CHUNK_TOTAL_BLOCKS: usize = HEIGHT * LENGTH * WIDTH;
 pub const RENDER_DISTANCE: i32 = 12;
 
 const DEFAULT_PBS: PbsParameters = PbsParameters {
-    pbs_value: 0.1,
-    min: 0.25,
+    pbs_value: 0.15,
+    min: 0.7,
     smoothing: PbsSmoothing::Low,
 };
 
@@ -127,10 +127,9 @@ impl Plugin for ChunkPlugin {
         )
         .add_systems(
             PostUpdate,
-            (
-                connect_chunks.run_if(not(any_with_component::<ComputeChunk>())),
-                introduce_neighboring_chunks.run_if(not(any_with_component::<ComputeChunk>())),
-            ),
+            ((connect_chunks, introduce_neighboring_chunks).run_if(
+                not(any_with_component::<ComputeChunk>())/* .and_then(resource_changed::<OneIn2>()) */,
+            ),),
         )
         .add_systems(PostStartup, setup_texture);
     }
@@ -223,6 +222,10 @@ fn connect_chunks(
                     && adj_chunk_grids.south.is_some()
                     && adj_chunk_grids.west.is_some()
                     && adj_chunk_grids.east.is_some()
+                    && adj_chunk_grids.no_east.is_some()
+                    && adj_chunk_grids.no_west.is_some()
+                    && adj_chunk_grids.so_east.is_some()
+                    && adj_chunk_grids.so_west.is_some()
                 {
                     commands.entity(entity).remove::<ToConnect>();
                 }

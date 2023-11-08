@@ -31,6 +31,21 @@ impl From<Face> for Direction {
     }
 }
 
+impl Into<usize> for Direction {
+    fn into(self) -> usize {
+        match self {
+            Direction::North => 0,
+            Direction::South => 1,
+            Direction::East => 2,
+            Direction::West => 3,
+            Direction::NoEast => 4,
+            Direction::NoWest => 5,
+            Direction::SoEast => 6,
+            Direction::SoWest => 7,
+        }
+    }
+}
+
 impl Into<Face> for Direction {
     fn into(self) -> Face {
         match self {
