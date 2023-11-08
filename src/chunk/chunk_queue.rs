@@ -72,14 +72,11 @@ impl ChunkQueue {
             let breg = Arc::clone(breg);
             chunk_map.pos_to_ent.insert(cords, Entity::PLACEHOLDER);
             let pbs = render_settings.pbs;
+            let noise_factor_cont = terrain_config.noise_factor_cont;
+            let noise_factor_scale = terrain_config.noise_factor_scale;
             task = thread_pool.spawn(async move {
                 // let grid = generate_flat_chunk(HEIGHT / 2);
-                let grid = generate_chunk(
-                    cords,
-                    &noise,
-                    terrain_config.noise_factor_cont,
-                    terrain_config.noise_factor_scale,
-                );
+                let grid = generate_chunk(cords, &noise, noise_factor_cont, noise_factor_scale);
                 let t = mesh_grid(
                     CHUNK_DIMS,
                     &[Bottom /* , Forward, Back, Right, Left */],
