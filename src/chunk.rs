@@ -1,33 +1,36 @@
 mod chunk_queue;
 mod introduce;
+mod misc;
 mod spawn;
 
 pub(super) use self::chunk_queue::ComputeChunk;
 pub(super) use crate::prelude::*;
+use crate::terrain::TerrainConfig;
 pub(super) use crate::{blocks::Block, utils::get_neighboring_chunk_cords};
 pub(super) use bevy::utils::hashbrown::HashMap;
 pub(super) use std::sync::{Arc, RwLock};
 
 use chunk_queue::*;
 use introduce::*;
+use misc::*;
 use rand::prelude::*;
 use spawn::*;
 
 // Number of blocks along the y axis
-pub const HEIGHT: usize = 40;
+pub const HEIGHT: usize = 56;
 // Number of blocks along the z axis
-pub const LENGTH: usize = 20;
+pub const LENGTH: usize = 16;
 // Number of blocks along the x axis
-pub const WIDTH: usize = 20;
+pub const WIDTH: usize = 16;
 pub const CHUNK_DIMS: (usize, usize, usize) = (WIDTH, HEIGHT, LENGTH);
 pub const CHUNK_TOTAL_BLOCKS: usize = HEIGHT * LENGTH * WIDTH;
-pub const RENDER_DISTANCE: i32 = 12;
+pub const RENDER_DISTANCE: i32 = 20;
 
-const DEFAULT_PBS: PbsParameters = PbsParameters {
-    pbs_value: 0.15,
-    min: 0.7,
-    smoothing: PbsSmoothing::Low,
-};
+const DEFAULT_PBS: Option<PbsParameters> = Some(PbsParameters {
+    pbs_value: 0.5,
+    min: 0.28,
+    smoothing: PbsSmoothing::Custom(2.0),
+});
 
 pub type ChunkArr = [Block; CHUNK_TOTAL_BLOCKS];
 pub const EMPTY_CHUNK: ChunkArr = [Block::AIR; CHUNK_TOTAL_BLOCKS];
@@ -96,7 +99,7 @@ pub struct CurrentChunk(pub ChunkCords);
 #[derive(Resource)]
 pub struct RenderSettings {
     pub render_distance: i32,
-    pub pbs: PbsParameters,
+    pub pbs: Option<PbsParameters>,
 }
 
 pub struct ChunkPlugin;
@@ -113,6 +116,12 @@ impl Plugin for ChunkPlugin {
                 pos_to_ent: bevy::utils::hashbrown::HashMap::new(),
             })
             .init_resource::<ChunkQueue>();
+        app.add_systems(
+            PreUpdate,
+            (reload_all).run_if(
+                resource_changed::<RenderSettings>().or_else(resource_changed::<TerrainConfig>()),
+            ),
+        );
         app.add_systems(
             Update,
             (

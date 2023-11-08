@@ -40,6 +40,7 @@ pub fn dequeue_all_chunks(
     mut chunk_queue: ResMut<ChunkQueue>,
     current_chunk: Res<CurrentChunk>,
     render_settings: Res<RenderSettings>,
+    terrain_config: Res<TerrainConfig>,
 ) {
     let breg = Arc::new(breg.into_inner().to_owned());
     chunk_queue.dequeue_all(
@@ -47,6 +48,8 @@ pub fn dequeue_all_chunks(
         commands,
         &breg,
         Some(|x: &[i32; 2]| chunk_distance(*x, current_chunk.0) < render_settings.render_distance),
+        &render_settings,
+        &terrain_config,
     );
 }
 

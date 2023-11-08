@@ -5,8 +5,34 @@ use noise::{NoiseFn, Perlin};
 use rand::prelude::*;
 pub const NOISE_SEED: usize = 10;
 pub const NOISE_SEED_SQRD: usize = NOISE_SEED * NOISE_SEED;
-pub const NOISE_FACTOR_CONT: f64 = 0.014;
-pub const NOISE_FACTOR_SCALE: f64 = 2.1;
+pub const NOISE_FACTOR_CONT: f64 = 0.010;
+pub const NOISE_FACTOR_SCALE: f64 = 1.8;
+
+use crate::prelude::{Plugin, Resource};
+#[derive(Resource)]
+pub struct TerrainConfig {
+    pub noise_seed: usize,
+    pub noise_seed_sqrd: usize,
+    pub noise_factor_cont: f64,
+    pub noise_factor_scale: f64,
+}
+impl Default for TerrainConfig {
+    fn default() -> Self {
+        TerrainConfig {
+            noise_seed: NOISE_SEED,
+            noise_seed_sqrd: NOISE_SEED_SQRD,
+            noise_factor_cont: NOISE_FACTOR_CONT,
+            noise_factor_scale: NOISE_FACTOR_SCALE,
+        }
+    }
+}
+
+pub struct TerrainPlugin;
+impl Plugin for TerrainPlugin {
+    fn build(&self, app: &mut bevy::prelude::App) {
+        app.init_resource::<TerrainConfig>();
+    }
+}
 
 // Generate chunk from noise
 pub fn generate_flat_chunk(sea_level: usize) -> [Block; CHUNK_TOTAL_BLOCKS] {
@@ -44,6 +70,8 @@ pub fn generate_flat_chunk(sea_level: usize) -> [Block; CHUNK_TOTAL_BLOCKS] {
 pub fn generate_chunk(
     cords: [i32; 2],
     noise: &impl NoiseFn<f64, 2>,
+    noise_factor_cont: f64,
+    noise_factor_scale: f64,
 ) -> [Block; CHUNK_TOTAL_BLOCKS] {
     let mut rng = rand::thread_rng();
     let mut height_map: [usize; WIDTH * LENGTH] = [0; WIDTH * LENGTH];
@@ -51,12 +79,12 @@ pub fn generate_chunk(
     // First, generate a height map
     for j in 0..LENGTH {
         for i in 0..WIDTH {
-            height_map[i + j * WIDTH] = (HEIGHT as f64 * 1.0 / NOISE_FACTOR_SCALE
+            height_map[i + j * WIDTH] = (HEIGHT as f64 * 1.0 / noise_factor_scale
                 + (noise.get([
-                    ((i as i32 + cords[0] * WIDTH as i32) as f64 + 0.5) * NOISE_FACTOR_CONT,
-                    ((j as i32 + cords[1] * LENGTH as i32) as f64 + 0.5) * NOISE_FACTOR_CONT,
+                    ((i as i32 + cords[0] * WIDTH as i32) as f64 + 0.5) * noise_factor_cont,
+                    ((j as i32 + cords[1] * LENGTH as i32) as f64 + 0.5) * noise_factor_cont,
                 ]) * HEIGHT as f64
-                    * (1.0 - 1.0 / NOISE_FACTOR_SCALE)))
+                    * (1.0 - 1.0 / noise_factor_scale)))
                 .min(HEIGHT as f64 - 1.0) as usize;
         }
     }

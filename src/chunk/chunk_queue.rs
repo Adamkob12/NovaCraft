@@ -1,9 +1,9 @@
-use super::{ChunkCords, ChunkMap, XSpriteMetaData, CHUNK_TOTAL_BLOCKS, HEIGHT};
+use super::{ChunkCords, ChunkMap, RenderSettings, XSpriteMetaData, CHUNK_TOTAL_BLOCKS, HEIGHT};
 use crate::blocks::blockreg::BlockRegistry;
 use crate::chunk::{Block, CHUNK_DIMS};
 use crate::meshify_custom_meshes::meshify_custom_meshes;
 use crate::prelude::*;
-use crate::terrain::{generate_chunk, generate_flat_chunk};
+use crate::terrain::{generate_chunk, generate_flat_chunk, TerrainConfig};
 use bevy::tasks::{AsyncComputeTaskPool, Task};
 use noise::Perlin;
 use std::sync::Arc;
@@ -30,9 +30,14 @@ pub struct ComputeChunk(
 );
 
 impl ChunkQueue {
+    pub fn clear(&mut self) {
+        self.queue.clear();
+    }
+
     pub fn enqueue(&mut self, cords: [i32; 2]) {
         self.queue.push(cords);
     }
+
     // Dequeue all the pending chunks to spawn / despawn.
     pub fn dequeue_all<F: Fn(&ChunkCords) -> bool>(
         &mut self,
@@ -40,6 +45,8 @@ impl ChunkQueue {
         mut commands: Commands,
         breg: &Arc<BlockRegistry>,
         condition: Option<F>,
+        render_settings: &RenderSettings,
+        terrain_config: &TerrainConfig,
     ) {
         if self.queue.is_empty() {
             return;
@@ -64,20 +71,22 @@ impl ChunkQueue {
             }
             let breg = Arc::clone(breg);
             chunk_map.pos_to_ent.insert(cords, Entity::PLACEHOLDER);
+            let pbs = render_settings.pbs;
             task = thread_pool.spawn(async move {
                 // let grid = generate_flat_chunk(HEIGHT / 2);
-                let grid = generate_chunk(cords, &noise);
+                let grid = generate_chunk(
+                    cords,
+                    &noise,
+                    terrain_config.noise_factor_cont,
+                    terrain_config.noise_factor_scale,
+                );
                 let t = mesh_grid(
                     CHUNK_DIMS,
                     &[Bottom /* , Forward, Back, Right, Left */],
                     &grid,
                     breg.as_ref(),
                     MeshingAlgorithm::Culling,
-                    Some(PbsParameters {
-                        pbs_value: 0.42,
-                        min: 0.15,
-                        smoothing: PbsSmoothing::Disabled,
-                    }),
+                    pbs,
                 )?;
                 let custom_voxel_meshes = meshify_custom_meshes(breg.as_ref(), &grid, CHUNK_DIMS);
                 Some((t, grid, cords, custom_voxel_meshes))

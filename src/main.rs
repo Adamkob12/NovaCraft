@@ -34,7 +34,7 @@ fn main() {
                 primary_window: Some(Window {
                     resizable: false,
                     mode: bevy::window::WindowMode::Windowed,
-                    resolution: WindowResolution::new(1200.0, 700.0),
+                    resolution: WindowResolution::new(1820.0, 920.0),
                     ..Default::default()
                 }),
                 ..Default::default()
@@ -42,6 +42,7 @@ fn main() {
         chunk::ChunkPlugin,
         player::PlayerPlugin,
         env::EnviornmentPlugin,
+        terrain::TerrainPlugin,
         helper_ecs_utils::HelperEcsUtilsPlugin,
     ))
     .init_resource::<BlockRegistry>();
