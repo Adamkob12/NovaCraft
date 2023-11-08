@@ -1,63 +1,56 @@
-use std::borrow::BorrowMut;
-
-use crate::blocks::blockreg::BlockRegistry;
-
 use super::*;
+use crate::blocks::blockreg::BlockRegistry;
+use rand::prelude::*;
 
 // "Introduce" means cull the sides between the chunks, which aren't visible, and apply pbs.
-pub fn introduce_neighboring_chunks_system(
-    chunk_map: Res<ChunkMap>,
+pub(super) fn introduce_neighboring_chunks(
     mut commands: Commands,
-    to_intoduce_query: Query<(Entity, &Cords, &ToIntroduce)>,
-    chunk_query: Query<(&Children, &Grid)>,
     mut meshes: ResMut<Assets<Mesh>>,
-    main_mesh_query: Query<(&Handle<Mesh>, &MainCulledMesh)>,
+    mesh_query: Query<(&Handle<Mesh>, &MainCulledMesh)>,
+    mut to_introduce_query: Query<(Entity, &Children, &mut ToIntroduce, &AdjChunkGrids)>,
     breg: Res<BlockRegistry>,
 ) {
+    let mut rng = rand::thread_rng();
     let breg = Arc::new(breg.into_inner().to_owned());
-    for (entity, _cords, to_intoduce) in to_intoduce_query.iter() {
-        if let Ok((children, grid)) = chunk_query.get(entity) {
-            for child in children {
-                if let Ok((mesh_handle, metadata)) = main_mesh_query.get(*child) {
-                    for (adj_cords, adj_face) in to_intoduce.0.iter() {
-                        let adj_entity = *chunk_map
-                            .pos_to_ent
-                            .get(adj_cords)
-                            .unwrap_or(&Entity::PLACEHOLDER);
-                        if adj_entity == Entity::PLACEHOLDER {
-                            continue;
-                        } else {
-                            if let Ok((adj_children, _)) = chunk_query.get(adj_entity) {
-                                for adj_child in adj_children {
-                                    if let Ok((adj_mesh_handle, adj_metadata)) =
-                                        main_mesh_query.get(*adj_child)
-                                    {
-                                        let adj_mesh = meshes.get_mut(adj_mesh_handle).unwrap();
-                                        introduce_adjacent_chunks(
-                                            Arc::clone(&breg).as_ref(),
-                                            adj_mesh,
-                                            &mut adj_metadata.0.write().unwrap(),
-                                            adj_face.opposite(),
-                                            &grid.0,
-                                        );
-                                    }
-                                }
-                            }
-                        }
-                        let mesh = meshes.get_mut(mesh_handle).unwrap();
-                        let (_, adj_grid) = chunk_query.get(adj_entity)
-                            .expect("Entity that wasn't in World was found in internal data structure ChunkMap, but shouldn't be.");
+    for (entity, children, mut to_introduce, adj_chunk_grids) in to_introduce_query.iter_mut() {
+        let p: f32 = rng.gen();
+        if p > 0.1 {
+            continue;
+        }
+        let mut to_remove = [false; 6];
+        for (_adj_cords, direction) in to_introduce.0.iter() {
+            'A: for child in children {
+                if let Ok((mesh_handle, MainCulledMesh(metadata))) = mesh_query.get(*child) {
+                    let mesh_ref_mut = meshes.get_mut(mesh_handle).unwrap();
+                    if let Some(adj_grid) = match direction {
+                        Back => &adj_chunk_grids.north,
+                        Forward => &adj_chunk_grids.south,
+                        Right => &adj_chunk_grids.east,
+                        Left => &adj_chunk_grids.west,
+                        _ => unreachable!(),
+                    } {
                         introduce_adjacent_chunks(
                             Arc::clone(&breg).as_ref(),
-                            mesh,
-                            &mut metadata.0.write().unwrap(),
-                            *adj_face,
-                            &adj_grid.0,
+                            mesh_ref_mut,
+                            &mut metadata.write().unwrap(),
+                            *direction,
+                            adj_grid.as_ref().read().unwrap().as_ref(),
                         );
+                        break 'A;
+                    } else {
+                        to_remove[*direction as usize] = true;
                     }
                 }
             }
         }
-        commands.entity(entity).remove::<ToIntroduce>();
+        to_introduce.0 = to_introduce
+            .0
+            .iter()
+            .copied()
+            .filter(|(_, y)| to_remove[*y as usize])
+            .collect();
+        if to_introduce.0.is_empty() {
+            commands.entity(entity).remove::<ToIntroduce>();
+        }
     }
 }

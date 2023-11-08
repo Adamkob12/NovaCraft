@@ -6,8 +6,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-bevy = "0.11.3"
-bevy_meshem = {git = "https://github.com/Adamkob12/bevy_meshem.git"}
+bevy = "0.12"
+# bevy_meshem = "0.3"
+bevy_meshem = { path = "../meshem/bevy_meshem" }
 futures-lite = "1.13.0"
 noise = "0.8.2"
 rand = "0.8.5"

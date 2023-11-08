@@ -8,7 +8,7 @@ use bevy::tasks::{AsyncComputeTaskPool, Task};
 use noise::Perlin;
 use std::sync::Arc;
 
-const NOISE_SEED: u32 = 10321090;
+const NOISE_SEED: u32 = 6175;
 
 #[derive(Resource, Default)]
 pub struct ChunkQueue {
@@ -74,9 +74,9 @@ impl ChunkQueue {
                     breg.as_ref(),
                     MeshingAlgorithm::Culling,
                     Some(PbsParameters {
-                        pbs_value: 0.51,
-                        min: 0.2,
-                        smoothing: PbsSmoothing::Low,
+                        pbs_value: 0.42,
+                        min: 0.15,
+                        smoothing: PbsSmoothing::Disabled,
                     }),
                 )?;
                 let custom_voxel_meshes = meshify_custom_meshes(breg.as_ref(), &grid, CHUNK_DIMS);

@@ -48,11 +48,11 @@ pub fn update_cage(
                             Block::AIR
                         } else {
                             let mut r = Block::AIR;
-                            for (cords, grid) in chunk_query.iter() {
+                            for (cords, Grid(grid)) in chunk_query.iter() {
                                 if cords.0 == chunk_pos {
                                     if let Some(block_pos) = one_d_cords_safe(block_pos, CHUNK_DIMS)
                                     {
-                                        r = grid.0[block_pos];
+                                        r = grid.as_ref().read().unwrap()[block_pos];
                                     }
                                 }
                             }

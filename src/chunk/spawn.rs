@@ -86,15 +86,22 @@ pub fn handle_chunk_spawn_tasks(
                 let entity = commands
                     .spawn((
                         Chunk,
-                        Grid(grid),
+                        Grid(Arc::new(RwLock::new(grid))),
+                        AdjChunkGrids {
+                            north: None,
+                            south: None,
+                            west: None,
+                            east: None,
+                        },
                         Cords(cords),
-                        ChunkCloseToPlayer,
                         ToIntroduce(vec![
                             (get_neighboring_chunk_cords(cords, Right), Right),
                             (get_neighboring_chunk_cords(cords, Left), Left),
                             (get_neighboring_chunk_cords(cords, Back), Back),
                             (get_neighboring_chunk_cords(cords, Forward), Forward),
                         ]),
+                        ToConnect,
+                        ChunkCloseToPlayer,
                         SpatialBundle {
                             transform,
                             ..Default::default()
