@@ -7,8 +7,10 @@ edition = "2021"
 
 [dependencies]
 bevy = "0.12"
+bevy_console = { path = "../bevy-console" }
 # bevy_meshem = "0.3"
 bevy_meshem = { path = "../meshem/bevy_meshem" }
+clap = "4.4.7"
 futures-lite = "1.13.0"
 noise = "0.8.2"
 rand = "0.8.5"

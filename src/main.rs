@@ -10,6 +10,7 @@ pub mod prelude {
 pub mod action;
 pub mod blocks;
 pub mod chunk;
+pub mod console;
 pub mod direction;
 pub mod env;
 pub mod helper_ecs_utils;
@@ -44,6 +45,7 @@ fn main() {
         env::EnviornmentPlugin,
         terrain::TerrainPlugin,
         helper_ecs_utils::HelperEcsUtilsPlugin,
+        console::GlobalConsolePlugin,
     ))
     .init_resource::<BlockRegistry>();
 

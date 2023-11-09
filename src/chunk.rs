@@ -26,7 +26,7 @@ pub const CHUNK_DIMS: (usize, usize, usize) = (WIDTH, HEIGHT, LENGTH);
 pub const CHUNK_TOTAL_BLOCKS: usize = HEIGHT * LENGTH * WIDTH;
 pub const RENDER_DISTANCE: i32 = 20;
 
-const DEFAULT_PBS: Option<PbsParameters> = Some(PbsParameters {
+pub const DEFAULT_PBS: Option<PbsParameters> = Some(PbsParameters {
     pbs_value: 0.5,
     min: 0.28,
     smoothing: PbsSmoothing::Custom(2.0),
@@ -117,7 +117,7 @@ impl Plugin for ChunkPlugin {
             })
             .init_resource::<ChunkQueue>();
         app.add_systems(
-            PreUpdate,
+            Update,
             (reload_all).run_if(
                 resource_changed::<RenderSettings>().or_else(resource_changed::<TerrainConfig>()),
             ),
