@@ -1,8 +1,9 @@
 use crate::chunk::ChunkCords;
+use crate::direction::from_cords_change;
 use crate::prelude::*;
 
-pub fn get_neighboring_chunk_cords(cords: ChunkCords, face: Direction) -> ChunkCords {
-    match face {
+pub fn get_neighboring_chunk_cords(cords: ChunkCords, dir: Direction) -> ChunkCords {
+    match dir {
         East => [cords[0] + 1, cords[1]],
         West => [cords[0] - 1, cords[1]],
         North => [cords[0], cords[1] + 1],

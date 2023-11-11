@@ -71,7 +71,7 @@ impl ChunkQueue {
             }
             let breg = Arc::clone(breg);
             chunk_map.pos_to_ent.insert(cords, Entity::PLACEHOLDER);
-            let pbs = render_settings.pbs;
+            let sl = render_settings.sl;
             let noise_factor_cont = terrain_config.noise_factor_cont;
             let noise_factor_scale = terrain_config.noise_factor_scale;
             task = thread_pool.spawn(async move {
@@ -79,11 +79,11 @@ impl ChunkQueue {
                 let grid = generate_chunk(cords, &noise, noise_factor_cont, noise_factor_scale);
                 let t = mesh_grid(
                     CHUNK_DIMS,
-                    &[Bottom /* , Forward, Back, Right, Left */],
+                    &[ /* , Forward, Back, Right, Left */],
                     &grid,
                     breg.as_ref(),
                     MeshingAlgorithm::Culling,
-                    pbs,
+                    sl,
                 )?;
                 let custom_voxel_meshes = meshify_custom_meshes(breg.as_ref(), &grid, CHUNK_DIMS);
                 Some((t, grid, cords, custom_voxel_meshes))

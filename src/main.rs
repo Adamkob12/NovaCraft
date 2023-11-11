@@ -11,7 +11,6 @@ pub mod action;
 pub mod blocks;
 pub mod chunk;
 pub mod console;
-pub mod direction;
 pub mod env;
 pub mod helper_ecs_utils;
 pub mod inventory;

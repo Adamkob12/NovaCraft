@@ -4,10 +4,10 @@ pub(super) use std::cmp;
 #[derive(Copy, Clone, Debug)]
 pub enum GlobalParameter {
     RenderDistance,
-    PbsValue,
-    PbsMin,
-    PbsSmoothing,
-    Pbs,
+    SLintensity,
+    SLmax,
+    SLsmoothing,
+    SL,
 }
 
 impl clap::builder::ValueParserFactory for GlobalParameter {
@@ -30,24 +30,24 @@ impl clap::builder::TypedValueParser for GlobalParameterParser {
         value: &std::ffi::OsStr,
     ) -> Result<Self::Value, clap::Error> {
         let render_distance = OsStr::from("render-distance");
-        let pbs_value = OsStr::from("pbs-value");
-        let pbs_min = OsStr::from("pbs-min");
-        let pbs_smoothing = OsStr::from("pbs-smoothing");
-        let pbs = OsStr::from("pbs");
+        let sl_intensity = OsStr::from("sli");
+        let sl_max = OsStr::from("slm");
+        let sl_smoothing = OsStr::from("sls");
+        let sl = OsStr::from("sl");
         if matches!(value.cmp(&render_distance), cmp::Ordering::Equal) {
             return Ok(GlobalParameter::RenderDistance);
         }
-        if matches!(value.cmp(&pbs_min), cmp::Ordering::Equal) {
-            return Ok(GlobalParameter::PbsMin);
+        if matches!(value.cmp(&sl_max), cmp::Ordering::Equal) {
+            return Ok(GlobalParameter::SLmax);
         }
-        if matches!(value.cmp(&pbs), cmp::Ordering::Equal) {
-            return Ok(GlobalParameter::Pbs);
+        if matches!(value.cmp(&sl), cmp::Ordering::Equal) {
+            return Ok(GlobalParameter::SL);
         }
-        if matches!(value.cmp(&pbs_value), cmp::Ordering::Equal) {
-            return Ok(GlobalParameter::PbsValue);
+        if matches!(value.cmp(&sl_intensity), cmp::Ordering::Equal) {
+            return Ok(GlobalParameter::SLintensity);
         }
-        if matches!(value.cmp(&pbs_smoothing), cmp::Ordering::Equal) {
-            return Ok(GlobalParameter::PbsSmoothing);
+        if matches!(value.cmp(&sl_smoothing), cmp::Ordering::Equal) {
+            return Ok(GlobalParameter::SLsmoothing);
         }
 
         Err(clap::Error::new(clap::error::ErrorKind::UnknownArgument))

@@ -1,3 +1,5 @@
+use crate::chunk::DEFAULT_SL;
+
 use super::*;
 
 /// Set a global parameter to a value
@@ -25,46 +27,48 @@ pub fn set_command(
                 render_settings.render_distance = value as i32;
                 reply!(set, "render-distance set to {}", value);
             }
-            GlobalParameter::PbsValue => {
-                if let Some(ref mut pbs) = render_settings.pbs {
-                    pbs.pbs_value = value;
-                    reply!(set, "pbs-value set to {}", value);
+            GlobalParameter::SLintensity => {
+                if let Some(ref mut sl) = render_settings.sl {
+                    sl.intensity = value;
+                    reply!(set, "smooth lighting value set to {}", value);
                 } else {
-                    reply!(set, "Cannot set pbs-value because PBS is disabled.\n Run 'set pbs 1' to enable it.");
+                    reply!(set, "Cannot set smooth lighting intensity because SL is disabled.\n Run 'set sl 1' to enable it.");
                     set.failed();
                 }
             }
-            GlobalParameter::PbsMin => {
-                if let Some(ref mut pbs) = render_settings.pbs {
-                    pbs.min = value;
-                    reply!(set, "pbs-min set to {}", value);
+            GlobalParameter::SLmax => {
+                if let Some(ref mut sl) = render_settings.sl {
+                    sl.max = value;
+                    reply!(set, "smooth lighting max set to {}", value);
                 } else {
-                    reply!(set, "Cannot set pbs-min because PBS is disabled.\n Run 'set pbs 1' to enable it.");
+                    reply!(set, "Cannot set smooth lighting max because SL is disabled.\n Run 'set sl 1' to enable it.");
                     set.failed();
                 }
             }
-            GlobalParameter::PbsSmoothing => {
-                if let Some(ref mut pbs) = render_settings.pbs {
-                    pbs.smoothing = PbsSmoothing::Custom(value);
-                    reply!(set, "pbs-smoothing set to {}", value);
+            GlobalParameter::SLsmoothing => {
+                if let Some(ref mut sl) = render_settings.sl {
+                    sl.smoothing = value;
+                    reply!(set, "smooth lighting smoothing set to {}", value);
                 } else {
-                    reply!(set, "Cannot set pbs-smoothing because PBS is disabled.\n Run 'set pbs 1' to enable it.");
+                    reply!(set, "Cannot set smooth lighting smoothing because SL is disabled.\n Run 'set sl 1' to enable it.");
                     set.failed();
                 }
             }
-            GlobalParameter::Pbs => match value as i32 {
+            GlobalParameter::SL => match value as i32 {
                 1 => {
-                    if render_settings.pbs.is_none() {
-                        render_settings.pbs = DEFAULT_PBS;
+                    if render_settings.sl.is_none() {
+                        render_settings.sl = DEFAULT_SL;
                     }
                 }
                 0 => {
-                    if render_settings.pbs.is_some() {
-                        render_settings.pbs = None;
+                    if render_settings.sl.is_some() {
+                        render_settings.sl = None;
                     }
                 }
                 _ => {
-                    set.reply("Expected either 1.0 to enable PBS or 0.0 to disable PBS");
+                    set.reply(
+                        "Expected either 1.0 to enable Smooth Lighting or 0.0 to disable it.",
+                    );
                     set.failed();
                 }
             },

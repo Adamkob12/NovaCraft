@@ -1,6 +1,7 @@
 mod chunk_queue;
 mod introduce;
 mod misc;
+mod smooth_lighting;
 mod spawn;
 
 pub(super) use self::chunk_queue::ComputeChunk;
@@ -8,6 +9,7 @@ pub(super) use crate::prelude::*;
 use crate::terrain::TerrainConfig;
 pub(super) use crate::{blocks::Block, utils::get_neighboring_chunk_cords};
 pub(super) use bevy::utils::hashbrown::HashMap;
+use smooth_lighting::*;
 pub(super) use std::sync::{Arc, RwLock};
 
 use chunk_queue::*;
@@ -24,12 +26,13 @@ pub const LENGTH: usize = 16;
 pub const WIDTH: usize = 16;
 pub const CHUNK_DIMS: (usize, usize, usize) = (WIDTH, HEIGHT, LENGTH);
 pub const CHUNK_TOTAL_BLOCKS: usize = HEIGHT * LENGTH * WIDTH;
-pub const RENDER_DISTANCE: i32 = 20;
+pub const RENDER_DISTANCE: i32 = 12;
 
-pub const DEFAULT_PBS: Option<PbsParameters> = Some(PbsParameters {
-    pbs_value: 0.5,
-    min: 0.28,
-    smoothing: PbsSmoothing::Custom(2.0),
+pub const DEFAULT_SL: Option<SmoothLightingParameters> = Some(SmoothLightingParameters {
+    intensity: 0.25,
+    max: 0.8,
+    smoothing: 1.6,
+    apply_at_gen: false,
 });
 
 pub type ChunkArr = [Block; CHUNK_TOTAL_BLOCKS];
@@ -43,6 +46,9 @@ pub struct Cords(pub ChunkCords);
 
 #[derive(Component)]
 pub struct ToConnect;
+
+#[derive(Component)]
+pub struct ToApplySL;
 
 #[derive(Component)]
 pub struct AdjChunkGrids {
@@ -99,7 +105,7 @@ pub struct CurrentChunk(pub ChunkCords);
 #[derive(Resource)]
 pub struct RenderSettings {
     pub render_distance: i32,
-    pub pbs: Option<PbsParameters>,
+    pub sl: Option<SmoothLightingParameters>,
 }
 
 pub struct ChunkPlugin;
@@ -110,16 +116,20 @@ impl Plugin for ChunkPlugin {
         app.insert_resource(CurrentChunk([0, 0]))
             .insert_resource(RenderSettings {
                 render_distance: RENDER_DISTANCE,
-                pbs: DEFAULT_PBS,
+                sl: DEFAULT_SL,
             })
             .insert_resource(ChunkMap {
                 pos_to_ent: bevy::utils::hashbrown::HashMap::new(),
             })
             .init_resource::<ChunkQueue>();
         app.add_systems(
-            Update,
-            (reload_all).run_if(
-                resource_changed::<RenderSettings>().or_else(resource_changed::<TerrainConfig>()),
+            PreUpdate,
+            (
+                reload_all.run_if(
+                    resource_changed::<RenderSettings>()
+                        .or_else(resource_changed::<TerrainConfig>()),
+                ),
+                apply_smooth_lighting_system,
             ),
         );
         app.add_systems(
@@ -169,76 +179,4 @@ fn setup_texture(
         ..default()
     });
     commands.insert_resource(XSpriteMaterial(xsprite_mat));
-}
-
-fn update_chunks_close_to_player(
-    mut commands: Commands,
-    chunk_map: Res<ChunkMap>,
-    current_chunk: Res<CurrentChunk>,
-    close_chunks_query: Query<Entity, With<ChunkCloseToPlayer>>,
-) {
-    for ent in close_chunks_query.iter() {
-        commands.entity(ent).remove::<ChunkCloseToPlayer>();
-    }
-
-    let current_chunk = current_chunk.0;
-    for i in -1..=1 {
-        for j in -1..=1 {
-            if let Some(&ent) = chunk_map
-                .pos_to_ent
-                .get(&[current_chunk[0] + i, current_chunk[1] + j])
-            {
-                if ent != Entity::PLACEHOLDER {
-                    commands.entity(ent).insert(ChunkCloseToPlayer);
-                }
-            }
-        }
-    }
-}
-
-fn connect_chunks(
-    chunk_map: Res<ChunkMap>,
-    chunk_grid_query: Query<&Grid>,
-    mut chunk_data_query: Query<(Entity, &mut AdjChunkGrids, &Cords), With<ToConnect>>,
-    mut commands: Commands,
-) {
-    let mut rng = rand::thread_rng();
-    for (entity, mut adj_chunk_grids, cords) in chunk_data_query.iter_mut() {
-        let p: f32 = rng.gen();
-        if p > 0.2 {
-            continue;
-        }
-        for direction in 1..9 {
-            let direction = Direction::from(direction);
-            let adj_chunk_cords = get_neighboring_chunk_cords(cords.0, direction);
-            if let Some(adj_entity) = chunk_map.pos_to_ent.get(&adj_chunk_cords) {
-                if *adj_entity == Entity::PLACEHOLDER {
-                    continue;
-                }
-                if let Ok(Grid(adj_grid)) = chunk_grid_query.get(*adj_entity) {
-                    match direction {
-                        North => adj_chunk_grids.north = Some(Arc::clone(adj_grid)),
-                        South => adj_chunk_grids.south = Some(Arc::clone(adj_grid)),
-                        East => adj_chunk_grids.east = Some(Arc::clone(adj_grid)),
-                        West => adj_chunk_grids.west = Some(Arc::clone(adj_grid)),
-                        NoEast => adj_chunk_grids.no_east = Some(Arc::clone(adj_grid)),
-                        NoWest => adj_chunk_grids.no_west = Some(Arc::clone(adj_grid)),
-                        SoEast => adj_chunk_grids.so_east = Some(Arc::clone(adj_grid)),
-                        SoWest => adj_chunk_grids.so_west = Some(Arc::clone(adj_grid)),
-                    }
-                }
-                if adj_chunk_grids.north.is_some()
-                    && adj_chunk_grids.south.is_some()
-                    && adj_chunk_grids.west.is_some()
-                    && adj_chunk_grids.east.is_some()
-                    && adj_chunk_grids.no_east.is_some()
-                    && adj_chunk_grids.no_west.is_some()
-                    && adj_chunk_grids.so_east.is_some()
-                    && adj_chunk_grids.so_west.is_some()
-                {
-                    commands.entity(entity).remove::<ToConnect>();
-                }
-            }
-        }
-    }
 }

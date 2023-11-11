@@ -17,3 +17,75 @@ pub(super) fn reload_all(
         commands.entity(task_entity).despawn_recursive();
     }
 }
+
+pub(super) fn update_chunks_close_to_player(
+    mut commands: Commands,
+    chunk_map: Res<ChunkMap>,
+    current_chunk: Res<CurrentChunk>,
+    close_chunks_query: Query<Entity, With<ChunkCloseToPlayer>>,
+) {
+    for ent in close_chunks_query.iter() {
+        commands.entity(ent).remove::<ChunkCloseToPlayer>();
+    }
+
+    let current_chunk = current_chunk.0;
+    for i in -1..=1 {
+        for j in -1..=1 {
+            if let Some(&ent) = chunk_map
+                .pos_to_ent
+                .get(&[current_chunk[0] + i, current_chunk[1] + j])
+            {
+                if ent != Entity::PLACEHOLDER {
+                    commands.entity(ent).insert(ChunkCloseToPlayer);
+                }
+            }
+        }
+    }
+}
+
+pub(super) fn connect_chunks(
+    chunk_map: Res<ChunkMap>,
+    chunk_grid_query: Query<&Grid>,
+    mut chunk_data_query: Query<(Entity, &mut AdjChunkGrids, &Cords), With<ToConnect>>,
+    mut commands: Commands,
+) {
+    let mut rng = rand::thread_rng();
+    for (entity, mut adj_chunk_grids, cords) in chunk_data_query.iter_mut() {
+        let p: f32 = rng.gen();
+        if p > 0.2 {
+            continue;
+        }
+        for direction in 1..9 {
+            let direction = Direction::from(direction);
+            let adj_chunk_cords = get_neighboring_chunk_cords(cords.0, direction);
+            if let Some(adj_entity) = chunk_map.pos_to_ent.get(&adj_chunk_cords) {
+                if *adj_entity == Entity::PLACEHOLDER {
+                    continue;
+                }
+                if let Ok(Grid(adj_grid)) = chunk_grid_query.get(*adj_entity) {
+                    match direction {
+                        North => adj_chunk_grids.north = Some(Arc::clone(adj_grid)),
+                        South => adj_chunk_grids.south = Some(Arc::clone(adj_grid)),
+                        East => adj_chunk_grids.east = Some(Arc::clone(adj_grid)),
+                        West => adj_chunk_grids.west = Some(Arc::clone(adj_grid)),
+                        NoEast => adj_chunk_grids.no_east = Some(Arc::clone(adj_grid)),
+                        NoWest => adj_chunk_grids.no_west = Some(Arc::clone(adj_grid)),
+                        SoEast => adj_chunk_grids.so_east = Some(Arc::clone(adj_grid)),
+                        SoWest => adj_chunk_grids.so_west = Some(Arc::clone(adj_grid)),
+                    }
+                }
+                if adj_chunk_grids.north.is_some()
+                    && adj_chunk_grids.south.is_some()
+                    && adj_chunk_grids.west.is_some()
+                    && adj_chunk_grids.east.is_some()
+                    && adj_chunk_grids.no_east.is_some()
+                    && adj_chunk_grids.no_west.is_some()
+                    && adj_chunk_grids.so_east.is_some()
+                    && adj_chunk_grids.so_west.is_some()
+                {
+                    commands.entity(entity).remove::<ToConnect>();
+                }
+            }
+        }
+    }
+}

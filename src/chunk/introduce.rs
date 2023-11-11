@@ -1,20 +1,20 @@
 use super::*;
 use crate::blocks::blockreg::BlockRegistry;
+use arrayref::array_ref;
 use rand::prelude::*;
 
-// "Introduce" means cull the sides between the chunks, which aren't visible, and apply pbs.
+// "Introduce" means cull the sides between the chunks (the intersection). And apply Smooth
+// Lighting if needed.
 pub(super) fn introduce_neighboring_chunks(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mesh_query: Query<(&Handle<Mesh>, &MainCulledMesh)>,
-    mut to_introduce_query: Query<(Entity, &Children, &mut ToIntroduce, &AdjChunkGrids, &Grid)>,
+    mut to_introduce_query: Query<(Entity, &Children, &mut ToIntroduce, &AdjChunkGrids)>,
     breg: Res<BlockRegistry>,
 ) {
     let mut rng = rand::thread_rng();
     let breg = Arc::new(breg.into_inner().to_owned());
-    for (entity, children, mut to_introduce, adj_chunk_grids, Grid(grid)) in
-        to_introduce_query.iter_mut()
-    {
+    for (entity, children, mut to_introduce, adj_chunk_grids) in to_introduce_query.iter_mut() {
         let p: f32 = rng.gen();
         if p > 0.1 {
             continue;
@@ -46,23 +46,6 @@ pub(super) fn introduce_neighboring_chunks(
                             }
                             _ => {}
                         }
-                        apply_pbs_with_connected_chunks(
-                            Arc::clone(&breg).as_ref(),
-                            mesh_ref_mut,
-                            &metadata.read().expect("c"),
-                            CHUNK_DIMS,
-                            0,
-                            CHUNK_TOTAL_BLOCKS,
-                            grid.read().expect("d").as_ref(),
-                            adj_chunk_grids.north.as_ref(),
-                            adj_chunk_grids.south.as_ref(),
-                            adj_chunk_grids.east.as_ref(),
-                            adj_chunk_grids.west.as_ref(),
-                            adj_chunk_grids.no_east.as_ref(),
-                            adj_chunk_grids.no_west.as_ref(),
-                            adj_chunk_grids.so_east.as_ref(),
-                            adj_chunk_grids.so_west.as_ref(),
-                        );
                         break 'A;
                     } else {
                         to_remove[*direction as usize] = true;
@@ -77,7 +60,8 @@ pub(super) fn introduce_neighboring_chunks(
             .filter(|(_, y)| to_remove[*y as usize])
             .collect();
         if to_introduce.0.is_empty() {
-            commands.entity(entity).remove::<ToIntroduce>();
+            let mut tmp = commands.entity(entity);
+            tmp.remove::<ToIntroduce>();
         }
     }
 }

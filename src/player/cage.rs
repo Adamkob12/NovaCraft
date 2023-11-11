@@ -59,7 +59,7 @@ pub fn update_cage(
                             r
                         };
                         cage.blocks[cage_index_1d] = block;
-                        // cage.blocks = [Block::AIR; CAGE_LEN];
+                        cage.blocks = [Block::AIR; CAGE_LEN];
                     }
                 }
             }

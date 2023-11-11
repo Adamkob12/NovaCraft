@@ -2,7 +2,7 @@ mod commands;
 pub(super) mod global_parameter;
 
 use crate::{
-    chunk::{RenderSettings, DEFAULT_PBS},
+    chunk::{RenderSettings, DEFAULT_SL},
     prelude::*,
 };
 use bevy_console::*;
