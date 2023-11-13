@@ -44,38 +44,38 @@ impl Plugin for HelperEcsUtilsPlugin {
     }
 }
 
-fn update_seconds(time: Res<Time>, mut sec: ResMut<GlobalSecondsCounter>) {
-    if time.elapsed_seconds() as u128 != sec.0 {
-        sec.0 = time.elapsed_seconds() as u128;
-    }
-}
-
-fn update_oi2(time: Res<Time>, mut sec: ResMut<OneIn2>) {
-    if time.elapsed().as_millis() % 2 == 0 {
-        sec.0 = !sec.0;
-    }
-}
-
-fn update_oi5(time: Res<Time>, mut sec: ResMut<GlobalSecondsCounter>) {
-    if time.elapsed().as_millis() % 5 == 0 {
-        sec.0 = !sec.0;
-    }
-}
-
-fn update_oi10(time: Res<Time>, mut sec: ResMut<GlobalSecondsCounter>) {
-    if time.elapsed().as_millis() % 10 == 0 {
-        sec.0 = !sec.0;
-    }
-}
-
-fn update_oi30(time: Res<Time>, mut sec: ResMut<GlobalSecondsCounter>) {
-    if time.elapsed().as_millis() % 30 == 0 {
-        sec.0 = !sec.0;
-    }
-}
-
-fn update_oi100(time: Res<Time>, mut sec: ResMut<GlobalSecondsCounter>) {
-    if time.elapsed().as_millis() % 100 == 0 {
-        sec.0 = !sec.0;
-    }
-}
+// fn update_seconds(time: Res<Time>, mut sec: ResMut<GlobalSecondsCounter>) {
+//     if time.elapsed_seconds() as u128 != sec.0 {
+//         sec.0 = time.elapsed_seconds() as u128;
+//     }
+// }
+//
+// fn update_oi2(time: Res<Time>, mut sec: ResMut<OneIn2>) {
+//     if time.elapsed().as_millis() % 2 == 0 {
+//         sec.0 = !sec.0;
+//     }
+// }
+//
+// fn update_oi5(time: Res<Time>, mut sec: ResMut<GlobalSecondsCounter>) {
+//     if time.elapsed().as_millis() % 5 == 0 {
+//         sec.0 = !sec.0;
+//     }
+// }
+//
+// fn update_oi10(time: Res<Time>, mut sec: ResMut<GlobalSecondsCounter>) {
+//     if time.elapsed().as_millis() % 10 == 0 {
+//         sec.0 = !sec.0;
+//     }
+// }
+//
+// fn update_oi30(time: Res<Time>, mut sec: ResMut<GlobalSecondsCounter>) {
+//     if time.elapsed().as_millis() % 30 == 0 {
+//         sec.0 = !sec.0;
+//     }
+// }
+//
+// fn update_oi100(time: Res<Time>, mut sec: ResMut<GlobalSecondsCounter>) {
+//     if time.elapsed().as_millis() % 100 == 0 {
+//         sec.0 = !sec.0;
+//     }
+// }

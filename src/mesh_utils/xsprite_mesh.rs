@@ -3,9 +3,8 @@ use crate::{
     chunk::{XSpriteMetaData, CHUNK_TOTAL_BLOCKS},
     prelude::*,
 };
-use bevy::render::render_resource::VertexFormat;
 
-pub fn meshify_custom_meshes(
+pub fn meshify_xsprite_voxels(
     reg: &impl VoxelRegistry<Voxel = Block>,
     grid: &[Block],
     dims: Dimensions,

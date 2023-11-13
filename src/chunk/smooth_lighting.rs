@@ -1,7 +1,5 @@
 use super::*;
 use crate::blocks::blockreg::BlockRegistry;
-use arrayref::array_ref;
-use rand::prelude::*;
 
 pub(super) fn apply_smooth_lighting_system(
     mut meshes: ResMut<Assets<Mesh>>,

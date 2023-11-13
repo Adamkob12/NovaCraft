@@ -1,14 +1,14 @@
-pub mod cage;
+pub mod controller;
 pub mod movement;
 
-use crate::blocks::Block;
 use crate::chunk::CurrentChunk;
-use crate::chunk::CHUNK_DIMS;
+use crate::chunk::HEIGHT;
 use crate::chunk::RENDER_DISTANCE;
 use crate::chunk::WIDTH;
-use crate::chunk::{ChunkCloseToPlayer, HEIGHT};
+use crate::mesh_utils::Chunk;
+use crate::mesh_utils::ComputeChunk;
 use crate::prelude::*;
-use bevy::ecs::event::{Events, ManualEventReader};
+use bevy::ecs::event::ManualEventReader;
 use bevy::input::mouse::MouseMotion;
 use bevy::window::{CursorGrabMode, PrimaryWindow};
 use bevy::{
@@ -17,12 +17,11 @@ use bevy::{
         ScreenSpaceAmbientOcclusionBundle, ScreenSpaceAmbientOcclusionQualityLevel,
         ScreenSpaceAmbientOcclusionSettings,
     },
-    prelude::*,
-    render::camera::TemporalJitter,
 };
-use cage::*;
+use bevy_xpbd_3d::prelude::Collider;
+use bevy_xpbd_3d::prelude::*;
+pub use controller::*;
 use movement::*;
-// ALWAYS ODD!
 
 /// Keeps track of mouse motion events, pitch, and yaw
 #[derive(Resource, Default)]
@@ -41,7 +40,7 @@ impl Default for MovementSettings {
     fn default() -> Self {
         Self {
             sensitivity: 0.000037,
-            speed: 18.,
+            speed: 30.,
         }
     }
 }
@@ -86,19 +85,22 @@ pub(super) fn setup_player(mut commands: Commands) {
                 .looking_to(Vec3::new(5.0, -1.0, 5.0), Vec3::Y),
                 ..Default::default()
             },
-            Cage {
-                blocks: [Block::AIR; CAGE_LEN],
-            },
-            FlyCam,
+            PlayerCamera,
         ))
         .insert(FogSettings {
             color: Color::rgb(0.85, 0.95, 1.0),
             falloff: FogFalloff::Linear {
-                start: ((RENDER_DISTANCE) * WIDTH as i32) as f32,
-                end: ((RENDER_DISTANCE + 1) * WIDTH as i32) as f32,
+                start: ((RENDER_DISTANCE - 2) * WIDTH as i32) as f32,
+                end: ((RENDER_DISTANCE - 1) * WIDTH as i32) as f32,
             },
             ..Default::default()
         })
+        .insert(CharacterControllerBundle::new(Collider::cuboid(
+            0.8, 3.4, 0.8,
+        )))
+        .insert(Friction::ZERO.with_combine_rule(CoefficientCombine::Min))
+        .insert(Restitution::ZERO.with_combine_rule(CoefficientCombine::Min))
+        .insert(GravityScale(2.0))
         .insert(TemporalAntiAliasBundle::default())
         .insert(ScreenSpaceAmbientOcclusionBundle {
             settings: ScreenSpaceAmbientOcclusionSettings {
@@ -111,7 +113,7 @@ pub(super) fn setup_player(mut commands: Commands) {
 /// Used in queries when you want flycams and not other cameras
 /// A marker component used in queries when you want flycams and not other cameras
 #[derive(Component)]
-pub struct FlyCam;
+pub struct PlayerCamera;
 
 // Keeps track of the blocks surrounding the player for physics
 /// Grabs/ungrabs mouse cursor
@@ -146,18 +148,40 @@ pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        assert!(CAGE_SIZE % 2 == 1, "Cage size should always be odd!");
         app.add_plugins((TemporalAntiAliasPlugin,))
             .init_resource::<InputState>()
             .init_resource::<MovementSettings>()
             .init_resource::<KeyBindings>()
             .insert_resource(CurrentChunk([0, 0]))
-            .add_systems(Startup, setup_player)
+            .add_systems(
+                Update,
+                setup_player.run_if(
+                    not(any_with_component::<ComputeChunk>())
+                        .and_then(not(any_with_component::<PlayerCamera>()))
+                        .and_then(any_with_component::<Chunk>()),
+                ),
+            )
             .add_systems(Startup, initial_grab_cursor)
             .add_systems(
                 Update,
-                (player_move, player_look, cursor_grab, update_cage)
-                  /*   .run_if(in_state(InitialChunkLoadState::Complete)), */
+                (
+                    // update_current_chunk,
+                    player_look,
+                    cursor_grab,
+                ), /*   .run_if(in_state(InitialChunkLoadState::Complete)), */
             );
     }
 }
+//
+// fn update_current_chunk(
+//     mut current_chunk: ResMut<CurrentChunk>,
+//     player: Query<&Transform, With<PlayerCamera>>,
+// ) {
+//     if let Ok(t) = player.get_single() {
+//         let tmp = position_to_chunk(t.translation, CHUNK_DIMS);
+//         if tmp != current_chunk.0 {
+//             current_chunk.0 = tmp;
+//             dbg!(tmp);
+//         }
+//     }
+// }

@@ -1,5 +1,4 @@
 use crate::chunk::ChunkCords;
-use crate::direction::from_cords_change;
 use crate::prelude::*;
 
 pub fn get_neighboring_chunk_cords(cords: ChunkCords, dir: Direction) -> ChunkCords {

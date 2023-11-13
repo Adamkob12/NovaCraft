@@ -1,9 +1,9 @@
-use super::{ChunkCords, ChunkMap, RenderSettings, XSpriteMetaData, CHUNK_TOTAL_BLOCKS, HEIGHT};
+use super::{ChunkCords, ChunkMap, RenderSettings, XSpriteMetaData, CHUNK_TOTAL_BLOCKS};
 use crate::blocks::blockreg::BlockRegistry;
 use crate::chunk::{Block, CHUNK_DIMS};
-use crate::meshify_custom_meshes::meshify_custom_meshes;
+use crate::mesh_utils::xsprite_mesh::meshify_xsprite_voxels;
 use crate::prelude::*;
-use crate::terrain::{generate_chunk, generate_flat_chunk, TerrainConfig};
+use crate::terrain::{generate_chunk, TerrainConfig};
 use bevy::tasks::{AsyncComputeTaskPool, Task};
 use noise::Perlin;
 use std::sync::Arc;
@@ -79,13 +79,13 @@ impl ChunkQueue {
                 let grid = generate_chunk(cords, &noise, noise_factor_cont, noise_factor_scale);
                 let t = mesh_grid(
                     CHUNK_DIMS,
-                    &[ /* , Forward, Back, Right, Left */],
+                    &[Bottom /* , Forward, Back, Right, Left */],
                     &grid,
                     breg.as_ref(),
                     MeshingAlgorithm::Culling,
                     sl,
                 )?;
-                let custom_voxel_meshes = meshify_custom_meshes(breg.as_ref(), &grid, CHUNK_DIMS);
+                let custom_voxel_meshes = meshify_xsprite_voxels(breg.as_ref(), &grid, CHUNK_DIMS);
                 Some((t, grid, cords, custom_voxel_meshes))
             });
             commands.spawn(ComputeChunk(task));

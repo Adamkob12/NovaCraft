@@ -1,7 +1,5 @@
 use super::*;
 use crate::blocks::blockreg::BlockRegistry;
-use arrayref::array_ref;
-use rand::prelude::*;
 
 // "Introduce" means cull the sides between the chunks (the intersection). And apply Smooth
 // Lighting if needed.

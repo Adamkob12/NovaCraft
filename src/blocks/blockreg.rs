@@ -108,12 +108,6 @@ impl Default for BlockRegistry {
     }
 }
 
-pub enum Collision {
-    NoEffect,
-    CompleteStop,
-    SpeedChange { change: f32 },
-}
-
 pub enum Breakable {
     NotBreakable,
     Breakable { durabillity: usize },
@@ -127,16 +121,6 @@ impl BlockRegistry {
             Block::DIRT => Breakable::Breakable { durabillity: 70 },
             Block::STONE => Breakable::Breakable { durabillity: 250 },
             Block::GREENERY => Breakable::Breakable { durabillity: 0 },
-        }
-    }
-
-    pub fn on_collision(block: &Block) -> Collision {
-        match *block {
-            Block::AIR => Collision::NoEffect,
-            Block::GRASS => Collision::CompleteStop,
-            Block::STONE => Collision::CompleteStop,
-            Block::DIRT => Collision::CompleteStop,
-            Block::GREENERY => Collision::SpeedChange { change: 0.85 },
         }
     }
 }

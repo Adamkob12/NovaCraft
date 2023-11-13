@@ -1,5 +1,4 @@
 use super::{chunk_queue::ChunkQueue, *};
-use crate::{blocks::blockreg::BlockRegistry, chunk::XSpriteMesh, utils::chunk_distance};
 
 pub(super) fn reload_all(
     mut commands: Commands,
@@ -15,31 +14,6 @@ pub(super) fn reload_all(
     }
     for task_entity in tasks_query.iter() {
         commands.entity(task_entity).despawn_recursive();
-    }
-}
-
-pub(super) fn update_chunks_close_to_player(
-    mut commands: Commands,
-    chunk_map: Res<ChunkMap>,
-    current_chunk: Res<CurrentChunk>,
-    close_chunks_query: Query<Entity, With<ChunkCloseToPlayer>>,
-) {
-    for ent in close_chunks_query.iter() {
-        commands.entity(ent).remove::<ChunkCloseToPlayer>();
-    }
-
-    let current_chunk = current_chunk.0;
-    for i in -1..=1 {
-        for j in -1..=1 {
-            if let Some(&ent) = chunk_map
-                .pos_to_ent
-                .get(&[current_chunk[0] + i, current_chunk[1] + j])
-            {
-                if ent != Entity::PLACEHOLDER {
-                    commands.entity(ent).insert(ChunkCloseToPlayer);
-                }
-            }
-        }
     }
 }
 

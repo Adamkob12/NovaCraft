@@ -9,7 +9,6 @@ pub(super) use crate::prelude::*;
 use crate::terrain::TerrainConfig;
 pub(super) use crate::{blocks::Block, utils::get_neighboring_chunk_cords};
 pub(super) use bevy::utils::hashbrown::HashMap;
-use bevy_xpbd_3d::prelude::AsyncCollider;
 use smooth_lighting::*;
 pub(super) use std::sync::{Arc, RwLock};
 
@@ -78,8 +77,7 @@ pub struct Grid(pub Arc<RwLock<ChunkArr>>);
 pub struct Chunk;
 
 #[derive(Component)]
-pub struct CollidableChunk;
-
+pub struct ChunkCloseToPlayer;
 
 #[derive(Component)]
 pub struct ToIntroduce(pub Vec<(ChunkCords, Direction)>);
@@ -138,9 +136,7 @@ impl Plugin for ChunkPlugin {
                 dequeue_all_chunks.run_if(resource_changed::<ChunkQueue>()),
                 handle_chunk_spawn_tasks,
                 apply_smooth_lighting_system,
-                queue_spawn_despawn_chunks
-                    // .run_if(resource_changed::<CurrentChunk>()
-                    //     .or_else(not(any_with_component::<ChunkCloseToPlayer>())))
+                (queue_spawn_despawn_chunks, update_chunks_close_to_player).run_if(resource_changed::<CurrentChunk>().or_else(not(any_with_component::<ChunkCloseToPlayer>())))
                 
             ),
         )

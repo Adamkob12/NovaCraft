@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_imports)]
 pub mod prelude {
     pub use crate::direction::{Direction, Direction::*};
     pub use crate::helper_ecs_utils::*;
@@ -14,14 +13,14 @@ pub mod console;
 pub mod env;
 pub mod helper_ecs_utils;
 pub mod inventory;
-pub mod meshify_custom_meshes;
+pub mod mesh_utils;
 pub mod player;
 pub mod terrain;
 pub mod utils;
 
 use bevy::window::WindowResolution;
+use bevy_xpbd_3d::prelude::*;
 use blocks::blockreg::BlockRegistry;
-use helper_ecs_utils::*;
 use prelude::*;
 
 fn main() {
@@ -39,6 +38,8 @@ fn main() {
                 }),
                 ..Default::default()
             }),
+        PhysicsPlugins::default(),
+        player::CharacterControllerPlugin,
         chunk::ChunkPlugin,
         player::PlayerPlugin,
         env::EnviornmentPlugin,

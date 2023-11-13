@@ -1,3 +1,5 @@
+use bevy_xpbd_3d::prelude::{ComputedCollider, RigidBody};
+
 use crate::{blocks::blockreg::BlockRegistry, chunk::XSpriteMesh, utils::chunk_distance};
 
 use super::{chunk_queue::ChunkQueue, *};
@@ -112,7 +114,6 @@ pub fn handle_chunk_spawn_tasks(
                             (get_neighboring_chunk_cords(cords, SoWest), SoWest),
                         ]),
                         ToConnect,
-                        ChunkCloseToPlayer,
                         SpatialBundle {
                             transform,
                             ..Default::default()
@@ -127,6 +128,8 @@ pub fn handle_chunk_spawn_tasks(
                             material: blocks_mat.0.clone(),
                             ..Default::default()
                         },
+                        RigidBody::Static,
+                        AsyncCollider(ComputedCollider::TriMesh),
                     ))
                     .id();
                 let xsprite_mesh_child = commands

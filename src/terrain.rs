@@ -1,7 +1,7 @@
 use crate::blocks::Block;
 use crate::chunk::{CHUNK_DIMS, CHUNK_TOTAL_BLOCKS, HEIGHT, LENGTH, WIDTH};
 use bevy_meshem::prelude::one_d_cords;
-use noise::{NoiseFn, Perlin};
+use noise::NoiseFn;
 use rand::prelude::*;
 pub const NOISE_SEED: usize = 10;
 pub const NOISE_SEED_SQRD: usize = NOISE_SEED * NOISE_SEED;

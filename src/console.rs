@@ -1,14 +1,10 @@
 mod commands;
 pub(super) mod global_parameter;
 
-use crate::{
-    chunk::{RenderSettings, DEFAULT_SL},
-    prelude::*,
-};
+use crate::prelude::*;
 use bevy_console::*;
-use clap::{builder::OsStr, Parser};
+use clap::builder::OsStr;
 use commands::*;
-use std::cmp;
 
 pub struct GlobalConsolePlugin;
 
