@@ -5,11 +5,14 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+# [build]
+# target = "x86_64-pc-windows-gnu"
+#
 [dependencies]
 bevy = "0.12"
-bevy_console = { path = "../bevy-console" }
+bevy_console = { git = "https://github.com/msklosak/bevy-console.git", rev = "c1b5901ca7c6e9da2e2fb39fbbf8b97deb5466f5" }
 # bevy_meshem = "0.3"
-bevy_meshem = { path = "../meshem/bevy_meshem" }
+bevy_meshem = { git = "https://github.com/Adamkob12/bevy_meshem.git" }
 clap = "4.4.7"
 futures-lite = "1.13.0"
 noise = "0.8.2"
