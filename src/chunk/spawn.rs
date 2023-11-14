@@ -1,3 +1,5 @@
+#[allow(unused_imports)]
+use bevy::pbr::wireframe::Wireframe;
 use bevy_xpbd_3d::prelude::{CollisionLayers, ComputedCollider, RigidBody};
 
 use crate::{blocks::blockreg::BlockRegistry, chunk::XSpriteMesh, utils::chunk_distance};
@@ -102,6 +104,7 @@ pub fn handle_chunk_spawn_tasks(
                             [crate::player::RigidLayer::Ground],
                             [crate::player::RigidLayer::Player],
                         ),
+                        // Wireframe,
                     ))
                     .id();
                 let xsprite_mesh_child = commands

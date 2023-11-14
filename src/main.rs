@@ -19,7 +19,7 @@ pub mod terrain;
 pub mod utils;
 pub mod visuals;
 
-use bevy::window::WindowResolution;
+use bevy::{pbr::wireframe::WireframePlugin, window::WindowResolution};
 use bevy_xpbd_3d::prelude::*;
 use blocks::blockreg::BlockRegistry;
 use prelude::*;
@@ -34,7 +34,7 @@ fn main() {
                 primary_window: Some(Window {
                     resizable: false,
                     mode: bevy::window::WindowMode::Windowed,
-                    resolution: WindowResolution::new(1280.0, 720.0),
+                    resolution: WindowResolution::new(1690.0, 1000.0),
                     ..Default::default()
                 }),
                 ..Default::default()
@@ -42,12 +42,14 @@ fn main() {
         PhysicsPlugins::default(),
         player::CharacterControllerPlugin,
         chunk::ChunkPlugin,
+        action::ActionPlugin,
         player::PlayerPlugin,
         env::EnviornmentPlugin,
         terrain::TerrainPlugin,
         helper_ecs_utils::HelperEcsUtilsPlugin,
         console::GlobalConsolePlugin,
         visuals::VisualsPlugin,
+        WireframePlugin,
     ))
     .init_resource::<BlockRegistry>();
 

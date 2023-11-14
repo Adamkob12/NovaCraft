@@ -76,7 +76,7 @@ pub(super) fn setup_player(mut commands: Commands) {
             transform: Transform::from_xyz(0.0, HEIGHT as f32 + 5.0, 0.0),
             ..Default::default()
         })
-        .insert(CharacterControllerBundle::new(Collider::capsule(3.0, 0.4)))
+        .insert(CharacterControllerBundle::new(Collider::capsule(1.0, 0.4)))
         .insert(Friction::new(0.2).with_combine_rule(CoefficientCombine::Min))
         .insert(Restitution::ZERO.with_combine_rule(CoefficientCombine::Min))
         .insert(GravityScale(2.5))

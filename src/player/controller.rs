@@ -93,7 +93,7 @@ impl MovementBundle {
 
 impl Default for MovementBundle {
     fn default() -> Self {
-        Self::new(60.0, 0.90, 7.0, PI * 0.3)
+        Self::new(72.0, 0.92, 7.0, PI * 0.3)
     }
 }
 

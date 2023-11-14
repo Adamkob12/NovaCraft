@@ -3,6 +3,7 @@ mod introduce;
 mod misc;
 mod smooth_lighting;
 mod spawn;
+mod update_chunks;
 
 pub(super) use self::chunk_queue::ComputeChunk;
 pub(super) use crate::prelude::*;
@@ -18,6 +19,7 @@ use introduce::*;
 use misc::*;
 use rand::prelude::*;
 use spawn::*;
+use update_chunks::*;
 
 // Number of blocks along the y axis
 pub const HEIGHT: usize = 56;
@@ -144,7 +146,8 @@ impl Plugin for ChunkPlugin {
                 dequeue_all_chunks.run_if(resource_changed::<ChunkQueue>()),
                 handle_chunk_spawn_tasks,
                 apply_smooth_lighting_system,
-                queue_spawn_despawn_chunks
+                queue_spawn_despawn_chunks,
+                update_chunks,
                     // .run_if(resource_changed::<CurrentChunk>()
                     //     .or_else(not(any_with_component::<ChunkCloseToPlayer>())))
                 
