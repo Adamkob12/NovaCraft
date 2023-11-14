@@ -17,6 +17,7 @@ pub mod mesh_utils;
 pub mod player;
 pub mod terrain;
 pub mod utils;
+pub mod visuals;
 
 use bevy::window::WindowResolution;
 use bevy_xpbd_3d::prelude::*;
@@ -33,7 +34,7 @@ fn main() {
                 primary_window: Some(Window {
                     resizable: false,
                     mode: bevy::window::WindowMode::Windowed,
-                    resolution: WindowResolution::new(1820.0, 920.0),
+                    resolution: WindowResolution::new(1280.0, 720.0),
                     ..Default::default()
                 }),
                 ..Default::default()
@@ -46,6 +47,7 @@ fn main() {
         terrain::TerrainPlugin,
         helper_ecs_utils::HelperEcsUtilsPlugin,
         console::GlobalConsolePlugin,
+        visuals::VisualsPlugin,
     ))
     .init_resource::<BlockRegistry>();
 

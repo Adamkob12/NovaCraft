@@ -93,7 +93,7 @@ impl MovementBundle {
 
 impl Default for MovementBundle {
     fn default() -> Self {
-        Self::new(30.0, 0.9, 7.0, PI * 0.45)
+        Self::new(60.0, 0.90, 7.0, PI * 0.3)
     }
 }
 
@@ -146,14 +146,16 @@ fn keyboard_input(
     if let Ok(tran) = transform_query.get_single() {
         let horizontal = (right as i8 - left as i8) as f32 * tran.right();
         let vertical = (up as i8 - down as i8) as f32 * tran.forward();
-        direction = (horizontal + vertical).normalize_or_zero();
+        direction = horizontal + vertical;
+        direction.y = 0.0;
+        direction = direction.normalize_or_zero();
     }
 
     if direction != Vec3::ZERO {
         movement_event_writer.send(MovementAction::Move(direction));
     }
 
-    if keyboard_input.just_pressed(KeyCode::Space) {
+    if keyboard_input.pressed(KeyCode::Space) {
         movement_event_writer.send(MovementAction::Jump);
     }
 }

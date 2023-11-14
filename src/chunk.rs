@@ -46,10 +46,14 @@ pub type XSpriteMetaData = Box<[(usize, usize, u32, u32); CHUNK_TOTAL_BLOCKS]>;
 pub struct Cords(pub ChunkCords);
 
 #[derive(Component)]
+pub struct MainChild(pub Entity);
+
+#[derive(Component)]
 pub struct ToConnect;
 
 #[derive(Component)]
-pub struct ToApplySL;
+// lower bound and upper bound
+pub struct ToApplySL(pub usize, pub usize);
 
 #[derive(Component)]
 pub struct AdjChunkGrids {
@@ -80,12 +84,14 @@ pub struct Chunk;
 #[derive(Component)]
 pub struct CollidableChunk;
 
+#[derive(Component)]
+pub struct ToUpdate;
 
 #[derive(Component)]
 pub struct ToIntroduce(pub Vec<(ChunkCords, Direction)>);
 
 #[derive(Component)]
-pub struct MainCulledMesh(RwLock<MeshMD<Block>>);
+pub struct MainCulledMesh(pub RwLock<MeshMD<Block>>);
 
 #[derive(Component)]
 pub struct XSpriteMesh(RwLock<XSpriteMetaData>);
@@ -179,4 +185,22 @@ fn setup_texture(
         ..default()
     });
     commands.insert_resource(XSpriteMaterial(xsprite_mat));
+}
+
+impl AdjChunkGrids {
+    pub fn get_grid_at_direction(&self, dir: crate::prelude::Direction) -> &Arc<RwLock<ChunkArr>> {
+        let grid_to_return = 
+        match dir {
+            North if self.north.is_some() => self.north.as_ref().unwrap(),
+            South if self.south.is_some() => self.north.as_ref().unwrap(),
+            East if self.east.is_some() => self.north.as_ref().unwrap(),
+            West if self.west.is_some() => self.north.as_ref().unwrap(),
+            NoEast if self.no_east.is_some() => self.north.as_ref().unwrap(),
+            NoWest if self.no_west.is_some() => self.north.as_ref().unwrap(),
+            SoEast if self.so_east.is_some() => self.north.as_ref().unwrap(),
+            SoWest if self.so_west.is_some() => self.north.as_ref().unwrap(),
+            _ => panic!("Can't get grid becuase it's not connected."),
+        };
+        grid_to_return
+    }
 }

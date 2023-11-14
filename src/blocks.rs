@@ -7,7 +7,7 @@ use std::fmt;
 
 pub type BlockId = u16;
 
-pub(super) const VOXEL_DIMS: [f32; 3] = [1.0, 1.0, 1.0];
+pub const VOXEL_DIMS: [f32; 3] = [1.0, 1.0, 1.0];
 pub(super) const VOXEL_CENTER: [f32; 3] = [0.0, 0.0, 0.0];
 pub(super) const TEXTURE_ATLAS_DIMS: [u32; 2] = [10, 10];
 pub(super) const PADDING: f32 = 1.0 / 16.0;

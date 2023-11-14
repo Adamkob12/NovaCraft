@@ -1,4 +1,4 @@
-use bevy_xpbd_3d::prelude::{ComputedCollider, RigidBody};
+use bevy_xpbd_3d::prelude::{CollisionLayers, ComputedCollider, RigidBody};
 
 use crate::{blocks::blockreg::BlockRegistry, chunk::XSpriteMesh, utils::chunk_distance};
 
@@ -88,9 +88,36 @@ pub fn handle_chunk_spawn_tasks(
                     0.0,
                     (cords[1] * LENGTH as i32) as f32,
                 );
+                let culled_mesh_child = commands
+                    .spawn((
+                        MainCulledMesh(metadata.into()),
+                        PbrBundle {
+                            mesh: culled_mesh_handle,
+                            material: blocks_mat.0.clone(),
+                            ..Default::default()
+                        },
+                        RigidBody::Static,
+                        AsyncCollider(ComputedCollider::TriMesh),
+                        CollisionLayers::new(
+                            [crate::player::RigidLayer::Ground],
+                            [crate::player::RigidLayer::Player],
+                        ),
+                    ))
+                    .id();
+                let xsprite_mesh_child = commands
+                    .spawn((
+                        PbrBundle {
+                            mesh: xsprite_mesh_handle,
+                            material: xsprite_mat.0.clone(),
+                            ..Default::default()
+                        },
+                        XSpriteMesh(RwLock::new(data)),
+                    ))
+                    .id();
                 let entity = commands
                     .spawn((
                         Chunk,
+                        MainChild(culled_mesh_child),
                         Grid(Arc::new(RwLock::new(grid))),
                         AdjChunkGrids {
                             north: None,
@@ -120,28 +147,7 @@ pub fn handle_chunk_spawn_tasks(
                         },
                     ))
                     .id();
-                let culled_mesh_child = commands
-                    .spawn((
-                        MainCulledMesh(metadata.into()),
-                        PbrBundle {
-                            mesh: culled_mesh_handle,
-                            material: blocks_mat.0.clone(),
-                            ..Default::default()
-                        },
-                        RigidBody::Static,
-                        AsyncCollider(ComputedCollider::TriMesh),
-                    ))
-                    .id();
-                let xsprite_mesh_child = commands
-                    .spawn((
-                        PbrBundle {
-                            mesh: xsprite_mesh_handle,
-                            material: xsprite_mat.0.clone(),
-                            ..Default::default()
-                        },
-                        XSpriteMesh(RwLock::new(data)),
-                    ))
-                    .id();
+
                 commands
                     .entity(entity)
                     .push_children(&[culled_mesh_child, xsprite_mesh_child]);

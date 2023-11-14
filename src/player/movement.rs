@@ -1,15 +1,6 @@
 use super::*;
 use crate::prelude::*;
 
-/// Grabs the cursor when game first starts
-pub(super) fn initial_grab_cursor(mut primary_window: Query<&mut Window, With<PrimaryWindow>>) {
-    if let Ok(mut window) = primary_window.get_single_mut() {
-        toggle_grab_cursor(&mut window);
-    } else {
-        warn!("Primary window not found for `initial_grab_cursor`!");
-    }
-}
-
 // /// Handles looking around if cursor is locked
 pub(super) fn player_look(
     settings: Res<MovementSettings>,
@@ -31,7 +22,6 @@ pub(super) fn player_look(
                         yaw -= (settings.sensitivity * ev.delta.x * window_scale).to_radians();
                     }
                 }
-
                 pitch = pitch.clamp(-1.54, 1.54);
 
                 // Order is important to prevent unintended roll
