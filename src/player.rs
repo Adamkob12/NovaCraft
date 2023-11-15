@@ -76,17 +76,22 @@ pub(super) fn setup_player(mut commands: Commands) {
             transform: Transform::from_xyz(0.0, HEIGHT as f32 + 5.0, 0.0),
             ..Default::default()
         })
-        .insert(CharacterControllerBundle::new(Collider::capsule(1.0, 0.4)))
+        .insert(CharacterControllerBundle::new(Collider::capsule(
+            1.15, 0.42,
+        )))
         .insert(Friction::new(0.2).with_combine_rule(CoefficientCombine::Min))
         .insert(Restitution::ZERO.with_combine_rule(CoefficientCombine::Min))
-        .insert(GravityScale(2.5))
+        .insert(GravityScale(3.0))
         .insert(CollisionLayers::new(
             [RigidLayer::Player],
             [RigidLayer::Ground],
         ))
         .id();
     let camera_entity = commands
-        .spawn(Camera3dBundle::default())
+        .spawn(Camera3dBundle {
+            transform: Transform::from_xyz(0.0, 0.45, 0.0),
+            ..Default::default()
+        })
         .insert(PlayerCamera)
         .insert(TemporalAntiAliasBundle::default())
         .insert(ScreenSpaceAmbientOcclusionBundle {
@@ -121,7 +126,7 @@ fn update_target_block(
         camera_position_transform.get_single(),
     ) {
         let forward = rot.forward();
-        let pos = pos.translation;
+        let pos = pos.translation + rot.translation;
         if let Some(ray_hit) = spatial_query.cast_ray(
             pos,
             forward,

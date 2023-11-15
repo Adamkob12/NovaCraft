@@ -105,6 +105,9 @@ pub fn handle_chunk_spawn_tasks(
                             [crate::player::RigidLayer::Player],
                         ),
                         // Wireframe,
+                        AabbGizmo {
+                            color: Some(Color::PINK),
+                        },
                     ))
                     .id();
                 let xsprite_mesh_child = commands

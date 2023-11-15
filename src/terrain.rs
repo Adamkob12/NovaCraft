@@ -5,8 +5,8 @@ use noise::NoiseFn;
 use rand::prelude::*;
 pub const NOISE_SEED: usize = 10;
 pub const NOISE_SEED_SQRD: usize = NOISE_SEED * NOISE_SEED;
-pub const NOISE_FACTOR_CONT: f64 = 0.010;
-pub const NOISE_FACTOR_SCALE: f64 = 1.8;
+pub const NOISE_FACTOR_CONT: f64 = 0.014;
+pub const NOISE_FACTOR_SCALE: f64 = 1.7;
 
 use crate::prelude::{Plugin, Resource};
 #[derive(Resource)]
