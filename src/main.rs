@@ -4,6 +4,10 @@ pub mod prelude {
     pub use bevy::prelude::*;
     pub use bevy::render::mesh::*;
     pub use bevy_meshem::prelude::*;
+    // Notical direction
+    pub mod notical {
+        pub use bevy_meshem::prelude::direction::*;
+    }
 }
 
 pub mod action;
@@ -35,7 +39,7 @@ fn main() {
                 primary_window: Some(Window {
                     resizable: false,
                     mode: bevy::window::WindowMode::Windowed,
-                    resolution: WindowResolution::new(1920.0, 1080.0),
+                    resolution: WindowResolution::new(1020.0, 720.0),
                     ..Default::default()
                 }),
                 ..Default::default()

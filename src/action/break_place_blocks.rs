@@ -1,4 +1,8 @@
-use crate::mesh_utils::{ChunkMap, Cords, Grid, MainChild, MainCulledMesh, ToUpdate, CHUNK_DIMS};
+use crate::mesh_utils::{
+    ChunkCords, ChunkMap, Cords, Grid, MainChild, MainCulledMesh, ToApplySL, ToUpdate, CHUNK_DIMS,
+    CHUNK_TOTAL_BLOCKS, LENGTH, WIDTH,
+};
+use crate::prelude::notical;
 
 use super::*;
 
@@ -15,6 +19,7 @@ pub(super) fn handle_break_block_event(
     child_chunk_query: Query<(&MainCulledMesh, &Parent)>,
     parent_chunk_query: Query<(&Grid, &Cords, &MainChild)>,
 ) {
+    let len = break_block_event_reader.len();
     for BlockBreakEvent(break_entity, break_index) in break_block_event_reader.read() {
         if let Ok((MainCulledMesh(metadata), parent)) = child_chunk_query.get(*break_entity) {
             if let Ok((Grid(grid), Cords(cords), _)) = parent_chunk_query.get(parent.get()) {
@@ -28,7 +33,7 @@ pub(super) fn handle_break_block_event(
                     } else {
                         let neighbor_index =
                             get_neigbhor_across_chunk(CHUNK_DIMS, *break_index, face);
-                        let change = to_cords(Some(Direction::from(face)));
+                        let change = to_cords(Some(notical::Direction::from(face)));
                         let new_cords = [cords[0] + change[0], cords[1] + change[1]];
                         if let Some(neighboring_entity) = chunk_map.pos_to_ent.get(&new_cords) {
                             if let Ok((Grid(neighboring_grid), _, MainChild(child))) =
@@ -60,6 +65,13 @@ pub(super) fn handle_break_block_event(
                     neighboring_blocks,
                 );
                 commands.entity(*break_entity).insert(ToUpdate);
+                insert_apply_sl_to_adjacent_chunks(
+                    &mut commands,
+                    *break_index,
+                    *cords,
+                    chunk_map.as_ref(),
+                    len,
+                );
             }
         }
     }
@@ -72,6 +84,7 @@ pub(super) fn handle_place_block_event(
     child_chunk_query: Query<(&MainCulledMesh, &Parent)>,
     parent_chunk_query: Query<(&Grid, &Cords, &MainChild)>,
 ) {
+    let len = place_block_event_reader.len();
     for BlockPlaceEvent(entity, index, face) in place_block_event_reader.read() {
         if let Ok((MainCulledMesh(metadata), parent)) = child_chunk_query.get(*entity) {
             if let Ok((Grid(grid), Cords(cords), _)) = parent_chunk_query.get(parent.get()) {
@@ -91,13 +104,20 @@ pub(super) fn handle_place_block_event(
                         neighboring_blocks,
                     );
                     commands.entity(*entity).insert(ToUpdate);
+                    insert_apply_sl_to_adjacent_chunks(
+                        &mut commands,
+                        neighbor,
+                        *cords,
+                        chunk_map.as_ref(),
+                        len,
+                    );
                 } else {
                     let neighbor = get_neigbhor_across_chunk(CHUNK_DIMS, *index, *face);
-                    let change = to_cords(Some(Direction::from(*face)));
+                    let change = to_cords(Some(notical::Direction::from(*face)));
                     let new_cords = [cords[0] + change[0], cords[1] + change[1]];
 
                     if let Some(neighboring_entity) = chunk_map.pos_to_ent.get(&new_cords) {
-                        if let Ok((Grid(neighboring_grid), _, MainChild(child))) =
+                        if let Ok((Grid(neighboring_grid), Cords(cords), MainChild(child))) =
                             parent_chunk_query.get(*neighboring_entity)
                         {
                             if let Ok((MainCulledMesh(neighboring_metadata), _)) =
@@ -118,9 +138,47 @@ pub(super) fn handle_place_block_event(
                                     neighboring_blocks,
                                 );
                                 commands.entity(*child).insert(ToUpdate);
+                                insert_apply_sl_to_adjacent_chunks(
+                                    &mut commands,
+                                    neighbor,
+                                    *cords,
+                                    chunk_map.as_ref(),
+                                    len,
+                                );
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+fn insert_apply_sl_to_adjacent_chunks(
+    commands: &mut Commands,
+    index: usize,
+    cords: ChunkCords,
+    chunk_map: &ChunkMap,
+    num_of_events_per_frame: usize,
+) {
+    for i in 0..6 {
+        let face = Face::from(i);
+        if is_block_on_edge(CHUNK_DIMS, index, face) {
+            let change = to_cords(Some(notical::Direction::from(face)));
+            let new_cords = [cords[0] + change[0], cords[1] + change[1]];
+            if let Some(neighboring_entity) = chunk_map.pos_to_ent.get(&new_cords) {
+                if *neighboring_entity == Entity::PLACEHOLDER {
+                    continue;
+                }
+                if num_of_events_per_frame == 1 {
+                    commands.entity(*neighboring_entity).insert(ToApplySL(
+                        index.checked_sub(WIDTH * LENGTH * 2).unwrap_or(0),
+                        index + (WIDTH * LENGTH * 2),
+                    ));
+                } else {
+                    commands
+                        .entity(*neighboring_entity)
+                        .insert(ToApplySL(0, CHUNK_TOTAL_BLOCKS));
                 }
             }
         }

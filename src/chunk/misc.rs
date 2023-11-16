@@ -1,4 +1,6 @@
 use super::{chunk_queue::ChunkQueue, *};
+use crate::utils::chunk_distance;
+use bevy_xpbd_3d::prelude::{Collider, CollisionLayers, ComputedCollider, RigidBody, TriMeshFlags};
 
 pub(super) fn reload_all(
     mut commands: Commands,
@@ -60,6 +62,55 @@ pub(super) fn connect_chunks(
                     commands.entity(entity).remove::<ToConnect>();
                 }
             }
+        }
+    }
+}
+
+pub(super) fn update_close_chunks(
+    mut commands: Commands,
+    chunks: Query<(Entity, &Cords, Has<CloseChunk>), With<Chunk>>,
+    current_chunk: Res<CurrentChunk>,
+) {
+    let current_chunk = current_chunk.0;
+    for (entity, Cords(cords), close) in chunks.iter() {
+        if !close && chunk_distance(current_chunk, *cords) < 2 {
+            commands.entity(entity).insert(CloseChunk);
+        }
+        if close && chunk_distance(current_chunk, *cords) > 1 {
+            commands.entity(entity).remove::<CloseChunk>();
+        }
+    }
+}
+
+pub(super) fn insert_collider_for_close_chunks(
+    mut commands: Commands,
+    new_close_chunks: Query<&MainChild, Added<CloseChunk>>,
+) {
+    for MainChild(child) in new_close_chunks.iter() {
+        commands.entity(*child).insert((
+            RigidBody::Static,
+            AsyncCollider(ComputedCollider::TriMeshWithFlags(
+                TriMeshFlags::MERGE_DUPLICATE_VERTICES,
+            )),
+            CollisionLayers::new(
+                [crate::player::RigidLayer::Ground],
+                [crate::player::RigidLayer::Player],
+            ),
+        ));
+    }
+}
+
+pub(super) fn remove_collider_for_far_away_chunks(
+    mut commands: Commands,
+    mut far_away_chunks: RemovedComponents<CloseChunk>,
+    parent_query: Query<&MainChild>,
+) {
+    for far_away_chunk in far_away_chunks.read() {
+        if let Ok(MainChild(child)) = parent_query.get(far_away_chunk) {
+            commands
+                .entity(*child)
+                .remove::<RigidBody>()
+                .remove::<Collider>();
         }
     }
 }

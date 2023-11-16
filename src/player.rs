@@ -5,7 +5,6 @@ use crate::chunk::HEIGHT;
 use crate::chunk::RENDER_DISTANCE;
 use crate::chunk::WIDTH;
 use crate::chunk::{CurrentChunk, CHUNK_DIMS};
-use crate::mesh_utils::Chunk;
 use crate::mesh_utils::ChunkCords;
 use crate::mesh_utils::ComputeChunk;
 use crate::prelude::*;
@@ -226,15 +225,14 @@ impl Plugin for PlayerPlugin {
                 setup_player.run_if(
                     not(any_with_component::<ComputeChunk>())
                         .and_then(not(any_with_component::<PlayerCamera>()))
-                        .and_then(any_with_component::<Chunk>()),
+                        .and_then(any_with_component::<Collider>()),
                 ),
             )
             .add_systems(
-                Update,
+                PostUpdate,
                 (
                     update_current_chunk,
-                    player_look,
-                    update_target_block,
+                    (player_look, update_target_block).chain(),
                     cursor_grab,
                 ),
             );

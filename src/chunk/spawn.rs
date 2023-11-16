@@ -1,6 +1,5 @@
 #[allow(unused_imports)]
 use bevy::pbr::wireframe::Wireframe;
-use bevy_xpbd_3d::prelude::{CollisionLayers, ComputedCollider, RigidBody};
 
 use crate::{blocks::blockreg::BlockRegistry, chunk::XSpriteMesh, utils::chunk_distance};
 
@@ -98,16 +97,10 @@ pub fn handle_chunk_spawn_tasks(
                             material: blocks_mat.0.clone(),
                             ..Default::default()
                         },
-                        RigidBody::Static,
-                        AsyncCollider(ComputedCollider::TriMesh),
-                        CollisionLayers::new(
-                            [crate::player::RigidLayer::Ground],
-                            [crate::player::RigidLayer::Player],
-                        ),
                         // Wireframe,
-                        AabbGizmo {
-                            color: Some(Color::PINK),
-                        },
+                        // AabbGizmo {
+                        //     color: Some(Color::PINK),
+                        // },
                     ))
                     .id();
                 let xsprite_mesh_child = commands

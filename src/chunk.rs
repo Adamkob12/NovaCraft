@@ -32,9 +32,9 @@ pub const CHUNK_TOTAL_BLOCKS: usize = HEIGHT * LENGTH * WIDTH;
 pub const RENDER_DISTANCE: i32 = 5;
 
 pub const DEFAULT_SL: Option<SmoothLightingParameters> = Some(SmoothLightingParameters {
-    intensity: 0.6,
+    intensity: 0.40,
     max: 0.9,
-    smoothing: 1.2,
+    smoothing: 1.0,
     apply_at_gen: false,
 });
 
@@ -49,6 +49,9 @@ pub struct Cords(pub ChunkCords);
 
 #[derive(Component)]
 pub struct MainChild(pub Entity);
+
+#[derive(Component)]
+pub struct CloseChunk;
 
 #[derive(Component)]
 pub struct ToConnect;
@@ -143,19 +146,17 @@ impl Plugin for ChunkPlugin {
         app.add_systems(
             Update,
             (
+                queue_spawn_despawn_chunks,
                 dequeue_all_chunks.run_if(resource_changed::<ChunkQueue>()),
                 handle_chunk_spawn_tasks,
-                apply_smooth_lighting_system,
-                queue_spawn_despawn_chunks,
-                update_chunks,
-                    // .run_if(resource_changed::<CurrentChunk>()
-                    //     .or_else(not(any_with_component::<ChunkCloseToPlayer>())))
-                
+                (update_chunks, apply_deferred,
+                (apply_smooth_lighting_after_update, apply_smooth_lighting_edgecases)).chain()
             ),
         )
+        .add_systems(PostUpdate, (update_close_chunks, insert_collider_for_close_chunks, remove_collider_for_far_away_chunks))
         .add_systems(
             PostUpdate,
-            ((connect_chunks, introduce_neighboring_chunks).run_if(
+            ((connect_chunks, introduce_neighboring_chunks, apply_smooth_lighting_after_introduce).run_if(
                 not(any_with_component::<ComputeChunk>())/* .and_then(resource_changed::<OneIn2>()) */,
             ),),
         )
@@ -192,8 +193,7 @@ fn setup_texture(
 
 impl AdjChunkGrids {
     pub fn get_grid_at_direction(&self, dir: crate::prelude::Direction) -> &Arc<RwLock<ChunkArr>> {
-        let grid_to_return = 
-        match dir {
+        let grid_to_return = match dir {
             North if self.north.is_some() => self.north.as_ref().unwrap(),
             South if self.south.is_some() => self.north.as_ref().unwrap(),
             East if self.east.is_some() => self.north.as_ref().unwrap(),

@@ -21,6 +21,7 @@ impl Plugin for ActionPlugin {
                     sort_actions,
                     handle_break_block_event,
                     handle_place_block_event,
+                    apply_deferred,
                 )
                     .run_if(any_with_component::<PlayerCamera>())
                     .chain(),

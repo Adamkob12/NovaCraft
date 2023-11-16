@@ -19,4 +19,4 @@ noise = "0.8.2"
 rand = "0.8.5"
 arrayref = "0.3.7"
 parry3d = "0.13.5"
-bevy_xpbd_3d = "0.3"
+bevy_xpbd_3d = { git = "https://github.com/Adamkob12/bevy_xpbd.git" }

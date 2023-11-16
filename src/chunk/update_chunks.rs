@@ -1,4 +1,5 @@
 use bevy_xpbd_3d::prelude::ComputedCollider;
+use parry3d::shape::TriMeshFlags;
 
 use super::*;
 use crate::{action::blockreg::BlockRegistry, prelude::*};
@@ -17,7 +18,10 @@ pub(super) fn update_chunks(
         if let Some(aabb) = mesh.compute_aabb() {
             if let Some(mut comm) = commands.get_entity(entity) {
                 comm.insert(aabb)
-                    .insert(AsyncCollider(ComputedCollider::TriMesh))
+                    .insert(AsyncCollider(ComputedCollider::TriMeshWithFlags(
+                        TriMeshFlags::MERGE_DUPLICATE_VERTICES,
+                    )))
+                    // .insert(ToApplySL(0, CHUNK_TOTAL_BLOCKS))
                     .remove::<ToUpdate>();
             }
         } else {
