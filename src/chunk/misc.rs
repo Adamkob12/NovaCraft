@@ -1,6 +1,6 @@
 use super::{chunk_queue::ChunkQueue, *};
 use crate::utils::chunk_distance;
-use bevy_xpbd_3d::prelude::{Collider, CollisionLayers, ComputedCollider, RigidBody, TriMeshFlags};
+use bevy_xpbd_3d::prelude::{CollisionLayers, ComputedCollider, RigidBody, TriMeshFlags};
 
 pub(super) fn reload_all(
     mut commands: Commands,
@@ -100,17 +100,17 @@ pub(super) fn insert_collider_for_close_chunks(
     }
 }
 
-pub(super) fn remove_collider_for_far_away_chunks(
-    mut commands: Commands,
-    mut far_away_chunks: RemovedComponents<CloseChunk>,
-    parent_query: Query<&MainChild>,
-) {
-    for far_away_chunk in far_away_chunks.read() {
-        if let Ok(MainChild(child)) = parent_query.get(far_away_chunk) {
-            commands
-                .entity(*child)
-                .remove::<RigidBody>()
-                .remove::<Collider>();
-        }
-    }
-}
+// pub(super) fn remove_collider_for_far_away_chunks(
+//     mut commands: Commands,
+//     mut far_away_chunks: RemovedComponents<CloseChunk>,
+//     parent_query: Query<&MainChild>,
+// ) {
+//     for far_away_chunk in far_away_chunks.read() {
+//         if let Ok(MainChild(child)) = parent_query.get(far_away_chunk) {
+//             commands
+//                 .entity(*child)
+//                 .remove::<RigidBody>()
+//                 .remove::<Collider>();
+//         }
+//     }
+// }

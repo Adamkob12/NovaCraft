@@ -1,10 +1,12 @@
 mod block_highlight;
+mod crosshair;
 
 pub(super) use crate::player::TargetBlock;
 pub(super) use crate::prelude::*;
 #[allow(unused_imports)]
 use bevy::diagnostic::{DiagnosticsStore, FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use block_highlight::*;
+use crosshair::*;
 
 pub struct VisualsPlugin;
 
@@ -17,6 +19,13 @@ impl Plugin for VisualsPlugin {
             // LogDiagnosticsPlugin::default(),
             FrameTimeDiagnosticsPlugin::default(),
         ));
+        app.init_resource::<CrossHairConfig>();
+        app.add_systems(
+            Update,
+            setup_crosshair.run_if(
+                resource_changed::<CrossHairConfig>().or_else(resource_added::<CrossHairConfig>()),
+            ),
+        );
         app.add_systems(Startup, (config_gizmos, setup))
             .add_systems(PostUpdate, (highlight_target_block, text_update_system));
     }

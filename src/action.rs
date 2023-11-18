@@ -66,7 +66,7 @@ fn broadcast_actions(
 ) {
     let prime_action_key = action_binds.prime_action;
     let second_action_key = action_binds.second_action;
-    if buttons.just_pressed(prime_action_key) {
+    if buttons.pressed(prime_action_key) {
         prime_action.send(PrimeAction {
             time_stamp: time.elapsed().as_millis(),
             action_type: ActionType::Start,
@@ -78,7 +78,7 @@ fn broadcast_actions(
             action_type: ActionType::Stop,
         });
     }
-    if buttons.pressed(second_action_key) {
+    if buttons.just_pressed(second_action_key) {
         second_action.send(SecondAction {
             time_stamp: time.elapsed().as_millis(),
             action_type: ActionType::Start,
@@ -100,7 +100,9 @@ fn sort_actions(
     mut place_block_writer: EventWriter<BlockPlaceEvent>,
 ) {
     for prime_action in prime_action_reader.read() {
-        if matches!(prime_action.action_type, ActionType::Start) {
+        if matches!(prime_action.action_type, ActionType::Start)
+            && target_block.ignore_flag == false
+        {
             break_block_writer.send(BlockBreakEvent(
                 target_block.target_entity,
                 target_block.block_index,
@@ -108,7 +110,9 @@ fn sort_actions(
         }
     }
     for second_action in second_action_reader.read() {
-        if matches!(second_action.action_type, ActionType::Stop) {
+        if matches!(second_action.action_type, ActionType::Start)
+            && target_block.ignore_flag == false
+        {
             place_block_writer.send(BlockPlaceEvent(
                 target_block.target_entity,
                 target_block.block_index,

@@ -7,6 +7,9 @@ use super::*;
 const HIGHLIGHT_SCALE: f32 = 1.005;
 
 pub(super) fn highlight_target_block(target_block: Res<TargetBlock>, mut gizmos: Gizmos) {
+    if target_block.ignore_flag == true {
+        return;
+    }
     // get pos in 3d
     let tmp = three_d_cords_arr(target_block.block_index, CHUNK_DIMS);
     // convert to Vec3 and offset

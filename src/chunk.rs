@@ -22,14 +22,14 @@ use spawn::*;
 use update_chunks::*;
 
 // Number of blocks along the y axis
-pub const HEIGHT: usize = 100;
+pub const HEIGHT: usize = 56;
 // Number of blocks along the z axis
 pub const LENGTH: usize = 16;
 // Number of blocks along the x axis
 pub const WIDTH: usize = 16;
 pub const CHUNK_DIMS: (usize, usize, usize) = (WIDTH, HEIGHT, LENGTH);
 pub const CHUNK_TOTAL_BLOCKS: usize = HEIGHT * LENGTH * WIDTH;
-pub const RENDER_DISTANCE: i32 = 5;
+pub const RENDER_DISTANCE: i32 = 12;
 
 pub const DEFAULT_SL: Option<SmoothLightingParameters> = Some(SmoothLightingParameters {
     intensity: 0.40,
@@ -153,7 +153,7 @@ impl Plugin for ChunkPlugin {
                 (apply_smooth_lighting_after_update, apply_smooth_lighting_edgecases)).chain()
             ),
         )
-        .add_systems(PostUpdate, (update_close_chunks, insert_collider_for_close_chunks, remove_collider_for_far_away_chunks))
+        .add_systems(PostUpdate, (update_close_chunks, insert_collider_for_close_chunks))
         .add_systems(
             PostUpdate,
             ((connect_chunks, introduce_neighboring_chunks, apply_smooth_lighting_after_introduce).run_if(

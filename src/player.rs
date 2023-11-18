@@ -1,12 +1,15 @@
 pub mod controller;
 pub mod movement;
 
+use std::f32::consts::PI;
+
 use crate::chunk::HEIGHT;
 use crate::chunk::RENDER_DISTANCE;
 use crate::chunk::WIDTH;
 use crate::chunk::{CurrentChunk, CHUNK_DIMS};
 use crate::mesh_utils::ChunkCords;
 use crate::mesh_utils::ComputeChunk;
+use crate::mesh_utils::LENGTH;
 use crate::prelude::*;
 use bevy::ecs::event::ManualEventReader;
 use bevy::input::mouse::MouseMotion;
@@ -23,8 +26,10 @@ use bevy_xpbd_3d::prelude::*;
 pub use controller::*;
 use movement::*;
 
+pub const CAMERA_HEIGHT_OFFSET: f32 = 0.45;
 pub const MAX_INTERACTION_DISTANCE: f32 = 7.0;
 pub const SMALL_TRAVERSE: f32 = 0.005;
+pub const FOV: f32 = PI / 3.0;
 
 #[derive(Component)]
 pub struct PlayerCamera;
@@ -40,6 +45,7 @@ pub struct PhysicalPlayer;
 
 #[derive(Resource)]
 pub struct TargetBlock {
+    pub ignore_flag: bool,
     pub target_entity: Entity,
     pub chunk_cords: ChunkCords,
     pub block_index: usize,
@@ -62,7 +68,7 @@ pub enum RigidLayer {
 impl Default for MovementSettings {
     fn default() -> Self {
         Self {
-            sensitivity: 0.000022,
+            sensitivity: 0.000037,
         }
     }
 }
@@ -78,9 +84,9 @@ pub(super) fn setup_player(mut commands: Commands) {
         .insert(CharacterControllerBundle::new(Collider::capsule(
             1.15, 0.42,
         )))
-        .insert(Friction::new(0.2).with_combine_rule(CoefficientCombine::Min))
+        .insert(Friction::ZERO.with_combine_rule(CoefficientCombine::Min))
         .insert(Restitution::ZERO.with_combine_rule(CoefficientCombine::Min))
-        .insert(GravityScale(3.0))
+        .insert(GravityScale(2.4))
         .insert(CollisionLayers::new(
             [RigidLayer::Player],
             [RigidLayer::Ground],
@@ -88,7 +94,12 @@ pub(super) fn setup_player(mut commands: Commands) {
         .id();
     let camera_entity = commands
         .spawn(Camera3dBundle {
-            transform: Transform::from_xyz(0.0, 0.45, 0.0),
+            transform: Transform::from_xyz(0.0, CAMERA_HEIGHT_OFFSET, 0.0),
+            projection: Projection::Perspective(PerspectiveProjection {
+                fov: FOV,
+                far: (RENDER_DISTANCE + 1) as f32 * WIDTH.max(LENGTH) as f32,
+                ..Default::default()
+            }),
             ..Default::default()
         })
         .insert(PlayerCamera)
@@ -163,12 +174,15 @@ fn update_target_block(
             let (chunk_cords, block_index, _) =
                 position_to_chunk_position(impact_point, CHUNK_DIMS);
             *target_block = TargetBlock {
+                ignore_flag: false,
                 target_entity: ray_hit.entity,
                 chunk_cords,
                 block_index: one_d_cords(block_index, CHUNK_DIMS),
                 face_hit: face,
                 ray_direction: forward,
             };
+        } else {
+            target_block.ignore_flag = true;
         }
     }
 }
@@ -254,6 +268,7 @@ fn update_current_chunk(
 impl Default for TargetBlock {
     fn default() -> Self {
         TargetBlock {
+            ignore_flag: true,
             target_entity: Entity::PLACEHOLDER,
             chunk_cords: [0, 0],
             block_index: 0,
