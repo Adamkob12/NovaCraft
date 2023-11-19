@@ -92,6 +92,7 @@ pub fn handle_chunk_spawn_tasks(
                 let culled_mesh_child = commands
                     .spawn((
                         MainCulledMesh(metadata.into()),
+                        ChunkChild,
                         PbrBundle {
                             mesh: culled_mesh_handle,
                             material: blocks_mat.0.clone(),
@@ -110,6 +111,7 @@ pub fn handle_chunk_spawn_tasks(
                             material: xsprite_mat.0.clone(),
                             ..Default::default()
                         },
+                        ChunkChild,
                         XSpriteMesh(RwLock::new(data)),
                     ))
                     .id();
