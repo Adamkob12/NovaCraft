@@ -1,4 +1,4 @@
-use bevy::pbr::wireframe::Wireframe;
+use bevy::pbr::wireframe::WireframeConfig;
 
 use crate::action::PhysicalPlayer;
 use crate::blocks::Block;
@@ -53,8 +53,8 @@ impl Default for DebugModeSettings {
     fn default() -> Self {
         DebugModeSettings {
             size: 35.0,
-            render_aabb: false,
-            render_wireframe: false,
+            render_aabb: true,
+            render_wireframe: true,
         }
     }
 }
@@ -62,20 +62,10 @@ impl Default for DebugModeSettings {
 pub(super) fn setup_debug_mode(
     mut commands: Commands,
     dm_settings: Res<DebugModeSettings>,
-    all_entities: Query<Entity>,
     asset_server: Res<AssetServer>,
 ) {
     let font_handle = asset_server.load("fonts/main_font.ttf");
-    if dm_settings.render_wireframe {
-        all_entities.iter().for_each(|ent| {
-            commands.entity(ent).insert(Wireframe);
-        });
-    }
-    if dm_settings.render_aabb {
-        all_entities.iter().for_each(|ent| {
-            commands.entity(ent).insert(AabbGizmo::default());
-        });
-    }
+
     // debug player position
     let player_pos = commands
         .spawn((
@@ -208,15 +198,32 @@ pub(super) fn update_debug_ui(
     }
 }
 
-pub(super) fn hide_debug_mode(mut debug_ui: Query<&mut Visibility, With<DebugUI>>) {
+pub(super) fn hide_debug_mode(
+    mut debug_ui: Query<&mut Visibility, With<DebugUI>>,
+    mut wireframe_config: ResMut<WireframeConfig>,
+    mut aabb_gizmo_config: ResMut<GizmoConfig>,
+) {
     if let Ok(mut visibillity) = debug_ui.get_single_mut() {
         *visibillity = Visibility::Hidden;
     }
+    wireframe_config.global = false;
+    aabb_gizmo_config.aabb.draw_all = false;
 }
 
-pub(super) fn show_debug_mode(mut debug_ui: Query<&mut Visibility, With<DebugUI>>) {
+pub(super) fn show_debug_mode(
+    mut debug_ui: Query<&mut Visibility, With<DebugUI>>,
+    mut wireframe_config: ResMut<WireframeConfig>,
+    mut aabb_gizmo_config: ResMut<GizmoConfig>,
+    dm_settings: Res<DebugModeSettings>,
+) {
     if let Ok(mut visibillity) = debug_ui.get_single_mut() {
         *visibillity = Visibility::Visible;
+    }
+    if dm_settings.render_wireframe {
+        wireframe_config.global = true;
+    }
+    if dm_settings.render_aabb {
+        aabb_gizmo_config.aabb.draw_all = true;
     }
 }
 
@@ -228,8 +235,4 @@ pub(super) fn toggle_debug_mode(
     if keys.just_pressed(KeyCode::T) {
         next_state_debug.set(current_state_debug.get().opposite());
     }
-    // match current_state_debug.get() {
-    //     DebugMode::Off => println!("Off"),
-    //     DebugMode::On => println!("On"),
-    // }
 }
