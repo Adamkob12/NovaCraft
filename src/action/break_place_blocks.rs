@@ -32,7 +32,11 @@ pub(super) fn handle_break_block_event(
                         neighboring_blocks[i] = Some(this_grid[neighbor])
                     } else {
                         let neighbor_index =
-                            get_neigbhor_across_chunk(CHUNK_DIMS, *break_index, face);
+                            get_neigbhor_across_chunk_safe(CHUNK_DIMS, *break_index, face);
+                        if neighbor_index.is_none() {
+                            continue;
+                        }
+                        let neighbor_index = neighbor_index.unwrap();
                         let change = to_cords(Some(notical::Direction::from(face)));
                         let new_cords = [cords[0] + change[0], cords[1] + change[1]];
                         if let Some(neighboring_entity) = chunk_map.pos_to_ent.get(&new_cords) {
@@ -112,7 +116,8 @@ pub(super) fn handle_place_block_event(
                         len,
                     );
                 } else {
-                    let neighbor = get_neigbhor_across_chunk(CHUNK_DIMS, *index, *face);
+                    let neighbor =
+                        get_neigbhor_across_chunk_safe(CHUNK_DIMS, *index, *face).unwrap();
                     let change = to_cords(Some(notical::Direction::from(*face)));
                     let new_cords = [cords[0] + change[0], cords[1] + change[1]];
 
