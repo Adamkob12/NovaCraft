@@ -51,6 +51,9 @@ pub struct Cords(pub ChunkCords);
 pub struct MainChild(pub Entity);
 
 #[derive(Component)]
+pub struct ChunkChild;
+
+#[derive(Component)]
 pub struct CloseChunk;
 
 #[derive(Component)]
