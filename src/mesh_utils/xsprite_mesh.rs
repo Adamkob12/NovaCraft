@@ -23,7 +23,7 @@ pub fn meshify_xsprite_voxels(
     let mut normals: Vec<[f32; 3]> = vec![];
 
     // data structure similar to VIVI, to map voxel index
-    let mut data_structure = [(usize::MAX, usize::MAX, u32::MAX, u32::MAX); CHUNK_TOTAL_BLOCKS];
+    let mut data_structure = [(usize::MIN, usize::MIN, u32::MIN, u32::MIN); CHUNK_TOTAL_BLOCKS];
 
     let width = dims.0;
     let length = dims.2;
@@ -129,7 +129,6 @@ pub fn update_xsprite_mesh(
                 add_xsprite_voxel(mesh, &mut md.vivi, *index, reg.get_mesh(block).unwrap())
             }
             VoxelChange::Broken => {
-                println!("{}", *index);
                 remove_xsprite_voxel(mesh, &mut md.vivi, *index);
             }
             _ => debug_assert!(false, "tried using unsupported VoxelChange in XSpriteMesh"),
@@ -140,37 +139,32 @@ pub fn update_xsprite_mesh(
 
 fn remove_xsprite_voxel(mesh: &mut Mesh, md: &mut XSpriteVIVI, index: usize) {
     let (vertex_start, vertex_end, index_start, index_end) = md[index];
-    let voffset = vertex_end - vertex_start;
-    let ioffset = index_end - index_start;
-    let mut i = 0;
+    let last = vertex_end == mesh.count_vertices();
+    if last {
+        dbg!(vertex_end);
+    }
     for (_, vav) in mesh.attributes_mut() {
-        i = 0;
-        for vertex in vertex_start..vertex_end {
-            vav.remove(vertex);
-            i += 1;
+        for vertex in (vertex_start..vertex_end).rev() {
+            vav.swap_remove(vertex);
         }
     }
-    println!("{i}");
-    // FIX BUG IN THE NEXT 10 LINES
     if let Some(Indices::U32(ref mut indices)) = mesh.indices_mut() {
-        for i in index_start..index_end {
-            indices.remove(i as usize);
+        for _ in (index_start..index_end).rev() {
+            // indices.swap_remove(i as usize);
+            indices.pop();
         }
-        for i in 0..indices.len() {
-            if indices[i] as usize >= vertex_end {
-                indices[i] -= voffset as u32;
+    }
+
+    md[index] = (usize::MIN, usize::MIN, u32::MIN, u32::MIN);
+    if !last {
+        let mut max = (0, 0);
+        for (i, (v, _, _, _)) in md.iter().enumerate() {
+            if *v > max.1 {
+                max = (i, *v);
             }
         }
+        md[max.0] = (vertex_start, vertex_end, index_start, index_end);
     }
-    for i in 0..md.len() {
-        if md[i].0 >= vertex_end {
-            md[i].0 -= voffset;
-            md[i].1 -= voffset;
-            md[i].2 -= ioffset as u32;
-            md[i].3 -= ioffset as u32;
-        }
-    }
-    md[index] = (0, 0, 0, 0)
 }
 
 fn add_xsprite_voxel<'a>(
@@ -179,6 +173,7 @@ fn add_xsprite_voxel<'a>(
     index: usize,
     voxel_mesh: &Mesh,
 ) {
+    println!("add");
     let ver_count = mesh.count_vertices();
     for (id, vav) in mesh.attributes_mut() {
         let vav2 = voxel_mesh.attribute(id).unwrap();

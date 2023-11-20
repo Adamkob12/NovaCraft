@@ -70,7 +70,6 @@ fn broadcast_actions(
     let prime_action_key = action_binds.prime_action;
     let second_action_key = action_binds.second_action;
     if buttons.just_pressed(prime_action_key) {
-        println!("pressed (:");
         prime_action.send(PrimeAction {
             time_stamp: time.elapsed().as_millis(),
             action_type: ActionType::Start,

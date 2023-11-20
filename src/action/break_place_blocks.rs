@@ -201,7 +201,6 @@ pub(super) fn handle_break_block_event_xsprite_chunk(
             if let Ok(Grid(grid)) = parent_chunk_query.get(parent.get()) {
                 let this_grid = grid.read().unwrap();
                 let block_to_break = this_grid[*break_index];
-                println!("{}", *break_index);
                 metadata.write().unwrap().log.push((
                     VoxelChange::Broken,
                     block_to_break,

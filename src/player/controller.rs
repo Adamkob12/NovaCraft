@@ -5,7 +5,7 @@ use bevy_xpbd_3d::{math::*, prelude::*};
 
 use super::{CAMERA_HEIGHT_OFFSET, FOV};
 
-pub const SPEED: f32 = 420.0;
+pub const SPEED: f32 = 500.0;
 
 pub struct CharacterControllerPlugin;
 
@@ -97,7 +97,7 @@ impl MovementBundle {
 
 impl Default for MovementBundle {
     fn default() -> Self {
-        Self::new(SPEED, 0.8, 6.5, PI * 0.2)
+        Self::new(SPEED, 0.72, 6.5, PI * 0.2)
     }
 }
 
