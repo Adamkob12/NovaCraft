@@ -84,19 +84,24 @@ pub(super) fn update_close_chunks(
 
 pub(super) fn insert_collider_for_close_chunks(
     mut commands: Commands,
-    new_close_chunks: Query<&MainChild, Added<CloseChunk>>,
+    new_close_chunks: Query<&Children, Added<CloseChunk>>,
+    physical_chunks: Query<(Entity, &ChunkPhysicalProperties)>,
 ) {
-    for MainChild(child) in new_close_chunks.iter() {
-        commands.entity(*child).insert((
-            RigidBody::Static,
-            AsyncCollider(ComputedCollider::TriMeshWithFlags(
-                TriMeshFlags::MERGE_DUPLICATE_VERTICES,
-            )),
-            CollisionLayers::new(
-                [crate::player::RigidLayer::Ground],
-                [crate::player::RigidLayer::Player],
-            ),
-        ));
+    for children in new_close_chunks.iter() {
+        for &child in children {
+            if let Ok((entity, pproperties)) = physical_chunks.get(child) {
+                commands.entity(entity).insert((
+                    RigidBody::Static,
+                    AsyncCollider(ComputedCollider::TriMeshWithFlags(
+                        TriMeshFlags::MERGE_DUPLICATE_VERTICES,
+                    )),
+                    CollisionLayers::new(
+                        pproperties.0.clone(),
+                        [crate::player::RigidLayer::Player],
+                    ),
+                ));
+            }
+        }
     }
 }
 

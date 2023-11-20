@@ -36,7 +36,6 @@ impl Plugin for TerrainPlugin {
 
 // Generate chunk from noise
 pub fn generate_flat_chunk(sea_level: usize) -> [Block; CHUNK_TOTAL_BLOCKS] {
-    let mut rng = rand::thread_rng();
     let sea_level = sea_level.min(HEIGHT - 1);
     let mut chunk = [Block::AIR; CHUNK_TOTAL_BLOCKS];
     for k in 0..HEIGHT {
@@ -44,8 +43,7 @@ pub fn generate_flat_chunk(sea_level: usize) -> [Block; CHUNK_TOTAL_BLOCKS] {
             for i in 0..WIDTH {
                 chunk[one_d_cords([i, k, j], CHUNK_DIMS)] = {
                     if k == sea_level + 1 {
-                        let r: f32 = rng.gen();
-                        if r > 0.9 {
+                        if true {
                             Block::GREENERY
                         } else {
                             Block::AIR
@@ -98,7 +96,7 @@ pub fn generate_chunk(
                 } else if height_map[x + z * WIDTH] + 1 == y && y > HEIGHT / 2 + 1 {
                     chunk[x + z * WIDTH + y * WIDTH * LENGTH] = {
                         let r: f32 = rng.gen();
-                        if r > 0.95 {
+                        if r > 0.93 {
                             Block::GREENERY
                         } else {
                             Block::AIR

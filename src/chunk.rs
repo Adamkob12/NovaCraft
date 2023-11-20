@@ -6,6 +6,7 @@ mod spawn;
 mod update_chunks;
 
 pub(super) use self::chunk_queue::ComputeChunk;
+pub(super) use crate::mesh_utils::xsprite_mesh::*;
 pub(super) use crate::prelude::*;
 use crate::terrain::TerrainConfig;
 pub(super) use crate::{blocks::Block, utils::get_neighboring_chunk_cords};
@@ -42,13 +43,16 @@ pub type ChunkArr = [Block; CHUNK_TOTAL_BLOCKS];
 pub const EMPTY_CHUNK: ChunkArr = [Block::AIR; CHUNK_TOTAL_BLOCKS];
 
 pub type ChunkCords = [i32; 2];
-pub type XSpriteMetaData = Box<[(usize, usize, u32, u32); CHUNK_TOTAL_BLOCKS]>;
+pub type XSpriteVIVI = Vec<(usize, usize, u32, u32)>;
 
 #[derive(Component)]
 pub struct Cords(pub ChunkCords);
 
 #[derive(Component)]
 pub struct MainChild(pub Entity);
+
+#[derive(Component)]
+pub struct XSpriteChild(pub Entity);
 
 #[derive(Component)]
 pub struct ChunkChild;
@@ -60,8 +64,10 @@ pub struct CloseChunk;
 pub struct ToConnect;
 
 #[derive(Component)]
-// lower bound and upper bound
 pub struct ToApplySL(pub usize, pub usize);
+
+#[derive(Component)]
+pub struct ChunkPhysicalProperties(Vec<crate::player::RigidLayer>);
 
 #[derive(Component)]
 pub struct AdjChunkGrids {
@@ -90,9 +96,6 @@ pub struct Grid(pub Arc<RwLock<ChunkArr>>);
 pub struct Chunk;
 
 #[derive(Component)]
-pub struct CollidableChunk;
-
-#[derive(Component)]
 pub struct ToUpdate;
 
 #[derive(Component)]
@@ -102,7 +105,7 @@ pub struct ToIntroduce(pub Vec<(ChunkCords, Direction)>);
 pub struct MainCulledMesh(pub RwLock<MeshMD<Block>>);
 
 #[derive(Component)]
-pub struct XSpriteMesh(RwLock<XSpriteMetaData>);
+pub struct XSpriteMesh(pub RwLock<XSpriteMetaData>);
 
 #[derive(Resource)]
 pub struct BlockMaterial(Handle<StandardMaterial>);
@@ -152,7 +155,7 @@ impl Plugin for ChunkPlugin {
                 queue_spawn_despawn_chunks,
                 dequeue_all_chunks.run_if(resource_changed::<ChunkQueue>()),
                 handle_chunk_spawn_tasks,
-                (update_chunks, apply_deferred,
+                ((update_chunks, update_xsprite_chunks), apply_deferred,
                 (apply_smooth_lighting_after_update, apply_smooth_lighting_edgecases)).chain()
             ),
         )

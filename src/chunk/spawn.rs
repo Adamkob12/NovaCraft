@@ -92,16 +92,13 @@ pub fn handle_chunk_spawn_tasks(
                 let culled_mesh_child = commands
                     .spawn((
                         MainCulledMesh(metadata.into()),
+                        ChunkPhysicalProperties(vec![crate::player::RigidLayer::Ground]),
                         ChunkChild,
                         PbrBundle {
                             mesh: culled_mesh_handle,
                             material: blocks_mat.0.clone(),
                             ..Default::default()
                         },
-                        // Wireframe,
-                        // AabbGizmo {
-                        //     color: Some(Color::PINK),
-                        // },
                     ))
                     .id();
                 let xsprite_mesh_child = commands
@@ -111,6 +108,9 @@ pub fn handle_chunk_spawn_tasks(
                             material: xsprite_mat.0.clone(),
                             ..Default::default()
                         },
+                        ChunkPhysicalProperties(vec![
+                            crate::player::RigidLayer::GroundNonCollidable,
+                        ]),
                         ChunkChild,
                         XSpriteMesh(RwLock::new(data)),
                     ))
@@ -119,6 +119,7 @@ pub fn handle_chunk_spawn_tasks(
                     .spawn((
                         Chunk,
                         MainChild(culled_mesh_child),
+                        XSpriteChild(xsprite_mesh_child),
                         Grid(Arc::new(RwLock::new(grid))),
                         AdjChunkGrids {
                             north: None,
