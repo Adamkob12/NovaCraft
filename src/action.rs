@@ -19,8 +19,11 @@ impl Plugin for ActionPlugin {
                 (
                     broadcast_actions,
                     sort_actions,
-                    handle_break_block_event,
-                    handle_place_block_event,
+                    (
+                        handle_break_block_event,
+                        handle_place_block_event,
+                        handle_break_block_event_xsprite_chunk,
+                    ),
                     apply_deferred,
                 )
                     .run_if(any_with_component::<PlayerCamera>())
@@ -66,7 +69,7 @@ fn broadcast_actions(
 ) {
     let prime_action_key = action_binds.prime_action;
     let second_action_key = action_binds.second_action;
-    if buttons.pressed(prime_action_key) {
+    if buttons.just_pressed(prime_action_key) {
         prime_action.send(PrimeAction {
             time_stamp: time.elapsed().as_millis(),
             action_type: ActionType::Start,
@@ -113,6 +116,9 @@ fn sort_actions(
         if matches!(second_action.action_type, ActionType::Start)
             && target_block.ignore_flag == false
         {
+            if target_block.face_hit.is_none() {
+                continue;
+            }
             place_block_writer.send(BlockPlaceEvent(
                 target_block.target_entity,
                 target_block.block_index,

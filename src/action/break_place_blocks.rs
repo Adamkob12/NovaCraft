@@ -1,6 +1,6 @@
 use crate::mesh_utils::{
-    ChunkCords, ChunkMap, Cords, Grid, MainChild, MainCulledMesh, ToApplySL, ToUpdate, CHUNK_DIMS,
-    CHUNK_TOTAL_BLOCKS, LENGTH, WIDTH,
+    ChunkCords, ChunkMap, Cords, Grid, MainChild, MainCulledMesh, ToApplySL, ToUpdate, XSpriteMesh,
+    CHUNK_DIMS, CHUNK_TOTAL_BLOCKS, LENGTH, WIDTH,
 };
 use crate::prelude::notical;
 
@@ -185,6 +185,30 @@ fn insert_apply_sl_to_adjacent_chunks(
                         .entity(*neighboring_entity)
                         .insert(ToApplySL(0, CHUNK_TOTAL_BLOCKS));
                 }
+            }
+        }
+    }
+}
+
+pub(super) fn handle_break_block_event_xsprite_chunk(
+    mut commands: Commands,
+    mut break_block_event_reader: EventReader<BlockBreakEvent>,
+    child_chunk_query: Query<(&XSpriteMesh, &Parent)>,
+    parent_chunk_query: Query<&Grid>,
+) {
+    for BlockBreakEvent(break_entity, break_index) in break_block_event_reader.read() {
+        if let Ok((XSpriteMesh(metadata), parent)) = child_chunk_query.get(*break_entity) {
+            if let Ok(Grid(grid)) = parent_chunk_query.get(parent.get()) {
+                let this_grid = grid.read().unwrap();
+                let block_to_break = this_grid[*break_index];
+                metadata.write().unwrap().log.push((
+                    VoxelChange::Broken,
+                    block_to_break,
+                    *break_index,
+                ));
+                drop(this_grid);
+                grid.write().unwrap()[*break_index] = Block::AIR;
+                commands.entity(*break_entity).insert(ToUpdate);
             }
         }
     }

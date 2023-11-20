@@ -28,7 +28,7 @@ use movement::*;
 
 pub const CAMERA_HEIGHT_OFFSET: f32 = 0.45;
 pub const MAX_INTERACTION_DISTANCE: f32 = 7.0;
-pub const SMALL_TRAVERSE: f32 = 0.005;
+pub const SMALL_TRAVERSE: f32 = 0.001;
 pub const FOV: f32 = PI / 3.0;
 
 #[derive(Component)]
@@ -59,10 +59,13 @@ pub struct MovementSettings {
     pub sensitivity: f32,
 }
 
-#[derive(PhysicsLayer)]
+#[repr(C)]
+#[derive(PhysicsLayer, Copy, Clone)]
 pub enum RigidLayer {
     Player,
     Ground,
+    GroundNonCollidable,
+    GroundNonBreakable,
 }
 
 impl Default for MovementSettings {
@@ -142,7 +145,8 @@ fn update_target_block(
             forward,
             MAX_INTERACTION_DISTANCE,
             false,
-            SpatialQueryFilter::new().with_masks([RigidLayer::Ground]),
+            SpatialQueryFilter::new()
+                .with_masks([RigidLayer::Ground, RigidLayer::GroundNonCollidable]),
         ) {
             let face = {
                 let mut to_return = None;
@@ -167,10 +171,6 @@ fn update_target_block(
                 to_return
             };
             let impact_point = pos + ray_hit.time_of_impact * forward + SMALL_TRAVERSE * forward;
-            // println!(
-            //     "impact point: {}, pos: {}, forward: {}, time_of_impact: {},",
-            //     impact_point, pos, forward, ray_hit.time_of_impact
-            // );
             let (chunk_cords, block_index, _) =
                 position_to_chunk_position(impact_point, CHUNK_DIMS);
             *target_block = TargetBlock {

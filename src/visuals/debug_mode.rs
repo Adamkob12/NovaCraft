@@ -53,8 +53,8 @@ impl Default for DebugModeSettings {
     fn default() -> Self {
         DebugModeSettings {
             size: 35.0,
-            render_aabb: true,
-            render_wireframe: true,
+            render_aabb: false,
+            render_wireframe: false,
         }
     }
 }
