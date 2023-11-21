@@ -4,13 +4,14 @@ use crate::mesh_utils::{
 };
 use crate::prelude::notical;
 
+use super::blockreg::BlockRegistry;
 use super::*;
 
 #[derive(Event)]
 pub struct BlockBreakEvent(pub Entity, pub usize);
 
 #[derive(Event)]
-pub struct BlockPlaceEvent(pub Entity, pub usize, pub Face);
+pub struct BlockPlaceEvent(pub Entity, pub usize, pub Face, pub Block);
 
 pub(super) fn handle_break_block_event(
     mut commands: Commands,
@@ -84,12 +85,16 @@ pub(super) fn handle_break_block_event(
 pub(super) fn handle_place_block_event(
     mut commands: Commands,
     mut place_block_event_reader: EventReader<BlockPlaceEvent>,
+    breg: Res<BlockRegistry>,
     chunk_map: Res<ChunkMap>,
     child_chunk_query: Query<(&MainCulledMesh, &Parent)>,
     parent_chunk_query: Query<(&Grid, &Cords, &MainChild)>,
 ) {
     let len = place_block_event_reader.len();
-    for BlockPlaceEvent(entity, index, face) in place_block_event_reader.read() {
+    for BlockPlaceEvent(entity, index, face, block_to_place) in place_block_event_reader.read() {
+        if !matches!(breg.get_mesh(&block_to_place), VoxelMesh::NormalCube(_)) {
+            continue;
+        }
         if let Ok((MainCulledMesh(metadata), parent)) = child_chunk_query.get(*entity) {
             if let Ok((Grid(grid), Cords(cords), _)) = parent_chunk_query.get(parent.get()) {
                 let mut neighboring_blocks: [Option<Block>; 6] = [None; 6];
@@ -100,11 +105,11 @@ pub(super) fn handle_place_block_event(
                             neighboring_blocks[i] = Some(grid.read().unwrap()[tmp]);
                         }
                     }
-                    grid.write().unwrap()[neighbor] = Block::STONE;
+                    grid.write().unwrap()[neighbor] = *block_to_place;
                     metadata.write().unwrap().log(
                         VoxelChange::Added,
                         neighbor,
-                        Block::STONE,
+                        *block_to_place,
                         neighboring_blocks,
                     );
                     commands.entity(*entity).insert(ToUpdate);
@@ -135,11 +140,12 @@ pub(super) fn handle_place_block_event(
                                             Some(neighboring_grid.read().unwrap()[tmp]);
                                     }
                                 }
-                                neighboring_grid.write().unwrap()[neighbor] = Block::STONE;
+
+                                neighboring_grid.write().unwrap()[neighbor] = *block_to_place;
                                 neighboring_metadata.write().unwrap().log(
                                     VoxelChange::Added,
                                     neighbor,
-                                    Block::STONE,
+                                    *block_to_place,
                                     neighboring_blocks,
                                 );
                                 commands.entity(*child).insert(ToUpdate);
