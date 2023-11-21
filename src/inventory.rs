@@ -19,12 +19,12 @@ impl Inventory {
     }
 
     pub(super) fn with_bar_slot(mut self, slot_index: usize, slot: InventorySlot) -> Inventory {
-        self.bar[slot_index] = slot;
+        self.bar[(slot_index + INVENTORY_SIZE - 1) % INVENTORY_SIZE] = slot;
         self
     }
 
     pub(super) fn with_pack_slot(mut self, slot_index: usize, slot: InventorySlot) -> Inventory {
-        self.pack[slot_index] = slot;
+        self.pack[(slot_index + INVENTORY_SIZE - 1) & INVENTORY_SIZE] = slot;
         self
     }
 }
@@ -134,8 +134,8 @@ impl Default for InventoryKeyBinds {
             open_inventory: KeyCode::E,
             next_item: KeyCode::Q,
             prev_item: KeyCode::P,
-            item1: KeyCode::Key2,
-            item2: KeyCode::Key1,
+            item1: KeyCode::Key1,
+            item2: KeyCode::Key2,
             item3: KeyCode::R,
             item4: KeyCode::Z,
             item5: KeyCode::X,
@@ -144,20 +144,6 @@ impl Default for InventoryKeyBinds {
             item8: KeyCode::G,
             item9: KeyCode::F,
         }
-    }
-}
-
-impl Plugin for InventoryPlugin {
-    fn build(&self, app: &mut App) {
-        app.init_resource::<InventoryKeyBinds>();
-        app.insert_resource(
-            Inventory::new()
-                .with_bar_slot(0, InventorySlot::Stack(Block::STONE, 20))
-                .with_bar_slot(1, InventorySlot::Stack(Block::GRASS, 5))
-                .with_bar_slot(2, InventorySlot::Stack(Block::GREENERY, 5))
-                .with_pack_slot(0, InventorySlot::Single(Block::DIRT)),
-        );
-        app.add_systems(PreUpdate, inventory_input);
     }
 }
 
@@ -178,7 +164,7 @@ fn inventory_input(
         inventory.current = 0 % INVENTORY_SIZE;
     }
     if keys.just_pressed(keybinds.item2) {
-        inventory.current = 0 % INVENTORY_SIZE;
+        inventory.current = 1 % INVENTORY_SIZE;
     }
     if keys.just_pressed(keybinds.item3) {
         inventory.current = 2 % INVENTORY_SIZE;
@@ -200,5 +186,19 @@ fn inventory_input(
     }
     if keys.just_pressed(keybinds.item9) {
         inventory.current = 8 % INVENTORY_SIZE;
+    }
+}
+
+impl Plugin for InventoryPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<InventoryKeyBinds>();
+        app.insert_resource(
+            Inventory::new()
+                .with_bar_slot(1, InventorySlot::Stack(Block::STONE, 20))
+                .with_bar_slot(2, InventorySlot::Stack(Block::GRASS, 5))
+                .with_bar_slot(3, InventorySlot::Stack(Block::GREENERY, 5))
+                .with_pack_slot(1, InventorySlot::Single(Block::DIRT)),
+        );
+        app.add_systems(PreUpdate, inventory_input);
     }
 }
