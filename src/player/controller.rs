@@ -117,6 +117,9 @@ impl CharacterControllerBundle {
                 Quaternion::default(),
                 Vector::NEG_Y,
             )
+            .with_query_filter(
+                SpatialQueryFilter::new().with_masks([crate::player::RigidLayer::Ground]),
+            )
             .with_max_time_of_impact(0.2),
             locked_axes: LockedAxes::ROTATION_LOCKED,
             movement: MovementBundle::default(),
