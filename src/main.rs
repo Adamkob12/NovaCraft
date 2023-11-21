@@ -54,6 +54,7 @@ fn main() {
         helper_ecs_utils::HelperEcsUtilsPlugin,
         console::GlobalConsolePlugin,
         visuals::VisualsPlugin,
+        inventory::InventoryPlugin,
         WireframePlugin,
     ))
     .init_resource::<BlockRegistry>();

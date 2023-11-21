@@ -1,4 +1,5 @@
 pub use crate::blocks::*;
+use crate::inventory::Inventory;
 pub use crate::player::*;
 pub use crate::prelude::*;
 
@@ -101,6 +102,7 @@ fn sort_actions(
     mut second_action_reader: EventReader<SecondAction>,
     mut break_block_writer: EventWriter<BlockBreakEvent>,
     mut place_block_writer: EventWriter<BlockPlaceEvent>,
+    mut inv: ResMut<Inventory>,
 ) {
     for prime_action in prime_action_reader.read() {
         if matches!(prime_action.action_type, ActionType::Start)
@@ -119,11 +121,14 @@ fn sort_actions(
             if target_block.face_hit.is_none() {
                 continue;
             }
-            place_block_writer.send(BlockPlaceEvent(
-                target_block.target_entity,
-                target_block.block_index,
-                target_block.face_hit.unwrap(),
-            ));
+            if let Some(block) = inv.take_current_single() {
+                place_block_writer.send(BlockPlaceEvent(
+                    target_block.target_entity,
+                    target_block.block_index,
+                    target_block.face_hit.unwrap(),
+                    block,
+                ));
+            }
         }
     }
 }
