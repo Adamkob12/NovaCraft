@@ -1,3 +1,5 @@
+use crate::prelude::*;
+
 pub mod blockreg;
 mod id;
 mod properties;
@@ -5,7 +7,11 @@ mod xsprite_mesh;
 
 use std::fmt;
 
+use self::blockreg::BlockRegistry;
+
 pub type BlockId = u16;
+
+pub struct BlocksPlugin;
 
 pub const VOXEL_DIMS: [f32; 3] = [1.0, 1.0, 1.0];
 pub(super) const VOXEL_CENTER: [f32; 3] = [0.0, 0.0, 0.0];
@@ -42,5 +48,11 @@ impl Into<&'static str> for Block {
 impl fmt::Debug for Block {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "NovaCraft::Block::{}", Into::<&'static str>::into(*self))
+    }
+}
+
+impl Plugin for BlocksPlugin {
+    fn build(&self, app: &mut App) {
+        app.init_resource::<BlockRegistry>();
     }
 }

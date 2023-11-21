@@ -3,13 +3,9 @@ pub mod movement;
 
 use std::f32::consts::PI;
 
-use crate::chunk::HEIGHT;
-use crate::chunk::RENDER_DISTANCE;
-use crate::chunk::WIDTH;
-use crate::chunk::{CurrentChunk, CHUNK_DIMS};
-use crate::mesh_utils::ChunkCords;
-use crate::mesh_utils::ComputeChunk;
-use crate::mesh_utils::LENGTH;
+use crate::chunk::{
+    ChunkCords, ComputeChunk, CurrentChunk, CHUNK_DIMS, HEIGHT, LENGTH, RENDER_DISTANCE, WIDTH,
+};
 use crate::prelude::*;
 use bevy::ecs::event::ManualEventReader;
 use bevy::input::mouse::MouseMotion;

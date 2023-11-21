@@ -1,5 +1,4 @@
 use super::{xsprite_mesh::generate_xsprite_mesh, *};
-use crate::prelude::*;
 
 #[derive(Resource, Clone)]
 pub struct BlockRegistry {

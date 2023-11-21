@@ -5,15 +5,15 @@ mod smooth_lighting;
 mod spawn;
 mod update_chunks;
 
-pub(super) use self::chunk_queue::ComputeChunk;
-pub(super) use crate::mesh_utils::xsprite_mesh::*;
-pub(super) use crate::prelude::*;
+pub use self::chunk_queue::ComputeChunk;
+use crate::mesh_utils::xsprite_mesh::*;
+use crate::prelude::*;
 use crate::terrain::TerrainConfig;
-pub(super) use crate::{blocks::Block, utils::get_neighboring_chunk_cords};
-pub(super) use bevy::utils::hashbrown::HashMap;
+use crate::{blocks::Block, utils::get_neighboring_chunk_cords};
+use bevy::utils::hashbrown::HashMap;
 use bevy_xpbd_3d::prelude::AsyncCollider;
 use smooth_lighting::*;
-pub(super) use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock};
 
 use chunk_queue::*;
 use introduce::*;
@@ -33,9 +33,9 @@ pub const CHUNK_TOTAL_BLOCKS: usize = HEIGHT * LENGTH * WIDTH;
 pub const RENDER_DISTANCE: i32 = 12;
 
 pub const DEFAULT_SL: Option<SmoothLightingParameters> = Some(SmoothLightingParameters {
-    intensity: 0.40,
-    max: 0.9,
-    smoothing: 1.0,
+    intensity: 0.34,
+    max: 0.95,
+    smoothing: 1.35,
     apply_at_gen: false,
 });
 
