@@ -23,6 +23,7 @@ pub enum Block {
     GRASS = 2,
     STONE = 3,
     GREENERY = 4,
+    SAND = 5,
 }
 
 impl Into<&'static str> for Block {
@@ -33,6 +34,7 @@ impl Into<&'static str> for Block {
             Self::GRASS => "Grass",
             Self::STONE => "Stone",
             Self::GREENERY => "Greenery",
+            Self::SAND => "Sand",
         }
     }
 }

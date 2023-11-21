@@ -109,7 +109,7 @@ fn sort_actions(
     mut second_action_reader: EventReader<SecondAction>,
     mut break_block_writer: EventWriter<BlockBreakEvent>,
     mut place_block_writer: EventWriter<BlockPlaceEvent>,
-    mut inv: ResMut<Inventory>,
+    inv: Res<Inventory>,
 ) {
     for prime_action in prime_action_reader.read() {
         if matches!(prime_action.action_type, ActionType::Start)

@@ -7,6 +7,7 @@ pub struct BlockRegistry {
     grass_mesh: Mesh,
     stone_mesh: Mesh,
     greenery_mesh: Mesh,
+    sand_mesh: Mesh,
 }
 
 impl VoxelRegistry for BlockRegistry {
@@ -17,6 +18,7 @@ impl VoxelRegistry for BlockRegistry {
             Block::GRASS => VoxelMesh::NormalCube(&self.grass_mesh),
             Block::STONE => VoxelMesh::NormalCube(&self.stone_mesh),
             Block::DIRT => VoxelMesh::NormalCube(&self.dirt_mesh),
+            Block::SAND => VoxelMesh::NormalCube(&self.sand_mesh),
             Block::GREENERY => VoxelMesh::CustomMesh(&self.greenery_mesh),
         }
     }
@@ -46,6 +48,22 @@ impl VoxelRegistry for BlockRegistry {
 impl Default for BlockRegistry {
     fn default() -> Self {
         BlockRegistry {
+            sand_mesh: generate_voxel_mesh(
+                VOXEL_DIMS,
+                TEXTURE_ATLAS_DIMS,
+                [
+                    (Top, [6, 0]),
+                    (Bottom, [6, 0]),
+                    (Right, [6, 0]),
+                    (Left, [6, 0]),
+                    (Back, [6, 0]),
+                    (Forward, [6, 0]),
+                ],
+                VOXEL_CENTER,
+                PADDING,
+                Some(COLOR_INTENSITY),
+                ALPHA,
+            ),
             dirt_mesh: generate_voxel_mesh(
                 VOXEL_DIMS,
                 TEXTURE_ATLAS_DIMS,
@@ -104,23 +122,6 @@ impl Default for BlockRegistry {
                 ALPHA,
                 GREENERY_SCALE,
             ),
-        }
-    }
-}
-
-pub enum Breakable {
-    NotBreakable,
-    Breakable { durabillity: usize },
-}
-
-impl BlockRegistry {
-    pub fn is_breakable(block: &Block) -> Breakable {
-        match *block {
-            Block::AIR => Breakable::NotBreakable,
-            Block::GRASS => Breakable::Breakable { durabillity: 100 },
-            Block::DIRT => Breakable::Breakable { durabillity: 70 },
-            Block::STONE => Breakable::Breakable { durabillity: 250 },
-            Block::GREENERY => Breakable::Breakable { durabillity: 0 },
         }
     }
 }
