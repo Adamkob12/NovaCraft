@@ -3,8 +3,13 @@ use crate::inventory::Inventory;
 pub use crate::player::*;
 pub use crate::prelude::*;
 
-mod break_place_blocks;
-use break_place_blocks::*;
+mod action_utils;
+mod break_blocks;
+mod place_blocks;
+
+use action_utils::*;
+use break_blocks::*;
+use place_blocks::*;
 
 pub struct ActionPlugin;
 
@@ -14,6 +19,7 @@ impl Plugin for ActionPlugin {
             .add_event::<SecondAction>()
             .add_event::<BlockBreakEvent>()
             .add_event::<BlockPlaceEvent>()
+            .add_event::<PlaceBlockGlobalEvent>()
             .init_resource::<ActionKeyBinds>()
             .add_systems(
                 PreUpdate,
@@ -25,6 +31,7 @@ impl Plugin for ActionPlugin {
                         handle_place_block_event,
                         handle_break_block_event_xsprite_chunk,
                     ),
+                    global_block_placer,
                     apply_deferred,
                 )
                     .run_if(any_with_component::<PlayerCamera>())
@@ -121,7 +128,7 @@ fn sort_actions(
             if target_block.face_hit.is_none() {
                 continue;
             }
-            if let Some(block) = inv.take_current_single() {
+            if let Some(block) = inv.get_current() {
                 place_block_writer.send(BlockPlaceEvent(
                     target_block.target_entity,
                     target_block.block_index,

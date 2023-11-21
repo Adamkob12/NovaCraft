@@ -1,8 +1,11 @@
 use crate::{
+    action::VOXEL_DIMS,
     blocks::Block,
     chunk::{XSpriteVIVI, CHUNK_TOTAL_BLOCKS},
     prelude::*,
 };
+
+use super::CHUNK_DIMS;
 
 pub struct XSpriteMetaData {
     pub vivi: XSpriteVIVI,
@@ -167,32 +170,42 @@ fn remove_xsprite_voxel(mesh: &mut Mesh, md: &mut XSpriteVIVI, index: usize) {
     }
 }
 
-fn add_xsprite_voxel<'a>(
-    mesh: &mut Mesh,
-    md: &'a mut XSpriteVIVI,
-    index: usize,
-    voxel_mesh: &Mesh,
-) {
-    println!("add");
+fn add_xsprite_voxel(mesh: &mut Mesh, md: &mut XSpriteVIVI, index: usize, voxel_mesh: &Mesh) {
     let ver_count = mesh.count_vertices();
-    for (id, vav) in mesh.attributes_mut() {
-        let vav2 = voxel_mesh.attribute(id).unwrap();
-        vav.extend(vav2);
-    }
-    let ver_count2 = mesh.count_vertices();
-    let mut ind_count = 0;
-    let mut ind_count2 = 0;
-    if let Some(Indices::U32(ref mut indices)) = mesh.indices_mut() {
-        ind_count = indices.len();
-        if let Some(Indices::U32(voxel_indices)) = voxel_mesh.indices() {
-            let indices_offset: Vec<u32> = voxel_indices
-                .clone()
-                .iter()
-                .map(|x| *x + ver_count as u32)
-                .collect();
-            indices.extend(indices_offset);
-            ind_count2 = indices.len();
+    if let Some([i, k, j]) = three_d_cords_arr_safe(index, CHUNK_DIMS) {
+        let position_offset = (
+            i as f32 * VOXEL_DIMS[0],
+            k as f32 * VOXEL_DIMS[1],
+            j as f32 * VOXEL_DIMS[2],
+        );
+        for (id, vav) in mesh.attributes_mut() {
+            if id == Mesh::ATTRIBUTE_POSITION.id {
+                let vav2 = voxel_mesh
+                    .attribute(Mesh::ATTRIBUTE_POSITION.id)
+                    .unwrap()
+                    .offset_all(position_offset);
+                vav.extend(&vav2);
+            } else {
+                let vav2 = voxel_mesh.attribute(id).unwrap();
+                vav.extend(vav2);
+            }
         }
+
+        let ver_count2 = mesh.count_vertices();
+        let mut ind_count = 0;
+        let mut ind_count2 = 0;
+        if let Some(Indices::U32(ref mut indices)) = mesh.indices_mut() {
+            ind_count = indices.len();
+            if let Some(Indices::U32(voxel_indices)) = voxel_mesh.indices() {
+                let indices_offset: Vec<u32> = voxel_indices
+                    .clone()
+                    .iter()
+                    .map(|x| *x + ver_count as u32)
+                    .collect();
+                indices.extend(indices_offset);
+                ind_count2 = indices.len();
+            }
+        }
+        md[index] = (ver_count, ver_count2, ind_count as u32, ind_count2 as u32);
     }
-    md[index] = (ver_count, ver_count2, ind_count as u32, ind_count2 as u32);
 }
