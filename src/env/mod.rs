@@ -9,7 +9,7 @@ pub struct EnviornmentPlugin;
 impl Plugin for EnviornmentPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(AmbientLight {
-            brightness: 0.8,
+            brightness: 1.0,
             color: Color::rgb(0.8, 0.9, 0.9),
         })
         // .insert_resource(Msaa::Sample4)

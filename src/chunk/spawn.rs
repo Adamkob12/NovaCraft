@@ -1,9 +1,13 @@
 #[allow(unused_imports)]
 use bevy::pbr::wireframe::Wireframe;
 
-use crate::{blocks::blockreg::BlockRegistry, chunk::XSpriteMesh, utils::chunk_distance};
+use crate::{blocks::blockreg::BlockRegistry, utils::chunk_distance};
 
-use super::{chunk_queue::ChunkQueue, *};
+use super::{
+    chunk_queue::ChunkQueue,
+    chunkmd::{ChunkMD, CMMD},
+    *,
+};
 
 // only run when CurrentChunk has changed
 pub fn queue_spawn_despawn_chunks(
@@ -91,7 +95,9 @@ pub fn handle_chunk_spawn_tasks(
                 );
                 let culled_mesh_child = commands
                     .spawn((
-                        MainCulledMesh(metadata.into()),
+                        // MainCulledMesh(metadata.into()),
+                        CMMD(ChunkMD::CubeMD(metadata).into()),
+                        CubeChunk,
                         ChunkPhysicalProperties(vec![crate::player::RigidLayer::Ground]),
                         ChunkChild,
                         PbrBundle {
@@ -112,7 +118,9 @@ pub fn handle_chunk_spawn_tasks(
                             crate::player::RigidLayer::GroundNonCollidable,
                         ]),
                         ChunkChild,
-                        XSpriteMesh(RwLock::new(data)),
+                        // XSpriteMesh(RwLock::new(data)),
+                        CMMD(ChunkMD::XSpriteMD(data).into()),
+                        XSpriteChunk,
                     ))
                     .id();
                 let entity = commands

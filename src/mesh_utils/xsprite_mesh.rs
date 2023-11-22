@@ -143,27 +143,29 @@ pub fn update_xsprite_mesh(
 fn remove_xsprite_voxel(mesh: &mut Mesh, md: &mut XSpriteVIVI, index: usize) {
     let (vertex_start, vertex_end, index_start, index_end) = md[index];
     let last = vertex_end == mesh.count_vertices();
-    for (_, vav) in mesh.attributes_mut() {
-        for vertex in (vertex_start..vertex_end).rev() {
-            vav.swap_remove(vertex);
-        }
-    }
-    if let Some(Indices::U32(ref mut indices)) = mesh.indices_mut() {
-        for _ in (index_start..index_end).rev() {
-            // indices.swap_remove(i as usize);
-            indices.pop();
-        }
-    }
-
-    md[index] = (usize::MIN, usize::MIN, u32::MIN, u32::MIN);
-    if !last {
-        let mut max = (0, 0);
-        for (i, (v, _, _, _)) in md.iter().enumerate() {
-            if *v > max.1 {
-                max = (i, *v);
+    if vertex_end - vertex_start > 0 {
+        for (_, vav) in mesh.attributes_mut() {
+            for vertex in (vertex_start..vertex_end).rev() {
+                vav.swap_remove(vertex);
             }
         }
-        md[max.0] = (vertex_start, vertex_end, index_start, index_end);
+        if let Some(Indices::U32(ref mut indices)) = mesh.indices_mut() {
+            for _ in (index_start..index_end).rev() {
+                // indices.swap_remove(i as usize);
+                indices.pop();
+            }
+        }
+
+        md[index] = (usize::MIN, usize::MIN, u32::MIN, u32::MIN);
+        if !last {
+            let mut max = (0, 0);
+            for (i, (v, _, _, _)) in md.iter().enumerate() {
+                if *v > max.1 {
+                    max = (i, *v);
+                }
+            }
+            md[max.0] = (vertex_start, vertex_end, index_start, index_end);
+        }
     }
 }
 

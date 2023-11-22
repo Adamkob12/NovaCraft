@@ -1,8 +1,6 @@
-use crate::chunk::{
-    Chunk, ChunkCords, ChunkMap, Cords, Grid, MainChild, MainCulledMesh, ToUpdate, XSpriteChild,
-    CHUNK_DIMS,
-};
-use crate::mesh_utils::{ChunkChild, XSpriteMesh};
+use crate::chunk::{Chunk, ChunkCords, ChunkMap, Cords, Grid, ToUpdate, CHUNK_DIMS};
+use crate::mesh_utils::chunkmd::CMMD;
+use crate::mesh_utils::{ChunkChild, CubeChunk, XSpriteChunk};
 use crate::prelude::notical;
 
 use super::blockreg::BlockRegistry;
@@ -52,11 +50,10 @@ pub(super) fn global_block_placer(
     mut global_block_place_events: EventReader<PlaceBlockGlobalEvent>,
     mut world_block_update_sender: EventWriter<WorldBlockUpdate>,
     mut commands: Commands,
-    chunk_map: Res<ChunkMap>,
     breg: Res<BlockRegistry>,
-    parent_chunks: Query<(&Grid, &MainChild, &XSpriteChild), With<Chunk>>,
-    cube_chunks: Query<&MainCulledMesh>,
-    xsprite_chunks: Query<&XSpriteMesh>,
+    chunk_map: Res<ChunkMap>,
+    parent_chunks: Query<(&Grid, &Children), With<Chunk>>,
+    chunk_metadata: Query<(&CMMD, Has<CubeChunk>, Has<XSpriteChunk>)>,
 ) {
     let len = global_block_place_events.len();
     for PlaceBlockGlobalEvent {
@@ -65,45 +62,52 @@ pub(super) fn global_block_placer(
         block_index: block_pos,
     } in global_block_place_events.read()
     {
-        if let (Some(grid), cube_child, xsprite_child) = chunk_map.pos_to_ent.get(chunk_pos).map_or(
-            (None, Entity::PLACEHOLDER, Entity::PLACEHOLDER),
-            |e| {
-                parent_chunks
-                    .get(*e)
-                    .map(|(grid, main, xsprite)| (Some(&grid.0), main.0, xsprite.0))
-                    .unwrap_or((None, Entity::PLACEHOLDER, Entity::PLACEHOLDER))
-            },
-        ) {
-            let mut adj_blocks = [None; 6];
-            for i in 0..6 {
-                let face = Face::from(i);
-                if let Some(tmp) = get_neighbor(*block_pos, face, CHUNK_DIMS) {
-                    adj_blocks[i] = Some(grid.read().unwrap()[tmp]);
-                }
-            }
-            match breg.get_mesh(block) {
-                VoxelMesh::Null => continue,
-                VoxelMesh::NormalCube(_) => {
-                    let MainCulledMesh(md) = cube_chunks.get(cube_child).unwrap();
-                    let mut md = md.write().unwrap();
-                    grid.write().unwrap()[*block_pos] = *block;
-                    md.log(VoxelChange::Added, *block_pos, *block, adj_blocks);
-                    commands.entity(cube_child).insert(ToUpdate);
+        if let (Some(Grid(grid)), children) =
+            chunk_map
+                .pos_to_ent
+                .get(chunk_pos)
+                .map_or((None, [Entity::PLACEHOLDER].iter()), |e| {
+                    parent_chunks
+                        .get(*e)
+                        .map(|(g, c)| (Some(g), c.iter()))
+                        .unwrap_or((None, [Entity::PLACEHOLDER].iter()))
+                })
+        {
+            let adj_blocks = [None::<Option<i8>>; 6]
+                .iter()
+                .enumerate()
+                .map(|(i, _)| {
+                    get_neighbor(*block_pos, Face::from(i), CHUNK_DIMS)
+                        .map(|n| grid.read().unwrap()[n])
+                })
+                .collect::<Vec<Option<Block>>>()
+                .try_into()
+                .unwrap();
+
+            for child in children {
+                if let Ok((md, cube_chunk, xsprite_chunk)) = chunk_metadata.get(*child) {
+                    // make sure we update the metadata of the right chunk
+                    match breg.get_mesh(block) {
+                        VoxelMesh::NormalCube(_) if xsprite_chunk => continue,
+                        VoxelMesh::CustomMesh(_) if cube_chunk => continue,
+                        VoxelMesh::Null => continue,
+                        _ => {}
+                    }
+                    md.0.write()
+                        .unwrap()
+                        .log_place(*block_pos, *block, adj_blocks);
+
+                    commands.entity(*child).insert(ToUpdate);
                     asl2ac(&mut commands, *block_pos, *chunk_pos, &chunk_map, len);
                 }
-                VoxelMesh::CustomMesh(_) => {
-                    let XSpriteMesh(md) = xsprite_chunks.get(xsprite_child).unwrap();
-                    let mut md = md.write().unwrap();
-                    grid.write().unwrap()[*block_pos] = *block;
-                    md.log.push((VoxelChange::Added, *block, *block_pos));
-                    commands.entity(xsprite_child).insert(ToUpdate);
-                    asl2ac(&mut commands, *block_pos, *chunk_pos, &chunk_map, len);
-                }
             }
+
+            grid.write().unwrap()[*block_pos] = *block;
             send_world_updates_surrounding_blocks(
                 *block_pos,
                 *chunk_pos,
                 &mut world_block_update_sender,
+                BlockUpdate::Placed,
             );
         }
     }

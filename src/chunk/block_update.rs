@@ -1,10 +1,11 @@
 use crate::action::properties::FallingBlock;
+use crate::action::BreakBlockGlobalEvent;
 use crate::player::RigidLayer;
 use crate::{
     action::{
         blockreg::BlockRegistry,
         properties::{BlockProperty, BlockPropertyRegistry},
-        BlockBreakEvent, WorldBlockUpdate, VOXEL_DIMS,
+        WorldBlockUpdate, VOXEL_DIMS,
     },
     utils::to_global_pos,
 };
@@ -14,7 +15,7 @@ use super::*;
 
 pub(super) fn handle_block_updates(
     mut world_block_update_events: EventReader<WorldBlockUpdate>,
-    mut break_block_event_sender: EventWriter<BlockBreakEvent>,
+    mut break_block_global_sender: EventWriter<BreakBlockGlobalEvent>,
     mut commands: Commands,
     chunk_map: Res<ChunkMap>,
     bpreg: Res<BlockPropertyRegistry>,
@@ -46,7 +47,10 @@ pub(super) fn handle_block_updates(
             match property {
                 BlockProperty::AffectedByGravity => {
                     if bpreg.contains_property(&block_below, &BlockProperty::YieldToFallingBlock) {
-                        break_block_event_sender.send(BlockBreakEvent(*block_entity, *block_index));
+                        break_block_global_sender.send(
+                            BreakBlockGlobalEvent::new(*block_index)
+                                .with_chunk_entity(*block_entity),
+                        );
                         spawn_falling_block(
                             &mut commands,
                             meshes.add(block_mesh.clone()),

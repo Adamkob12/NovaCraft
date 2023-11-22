@@ -10,8 +10,7 @@ mod break_blocks;
 mod place_blocks;
 
 use action_utils::*;
-pub use break_blocks::BlockBreakEvent;
-use break_blocks::*;
+pub use break_blocks::*;
 pub use place_blocks::*;
 
 pub struct ActionPlugin;
@@ -20,9 +19,9 @@ impl Plugin for ActionPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<PrimeAction>()
             .add_event::<SecondAction>()
-            .add_event::<BlockBreakEvent>()
             .add_event::<BlockPlaceEvent>()
             .add_event::<PlaceBlockGlobalEvent>()
+            .add_event::<BreakBlockGlobalEvent>()
             .init_resource::<ActionKeyBinds>()
             .add_systems(
                 PreUpdate,
@@ -30,11 +29,7 @@ impl Plugin for ActionPlugin {
                     broadcast_actions,
                     sort_actions,
                     follow_falling_block,
-                    (
-                        handle_break_block_event,
-                        handle_place_block_event,
-                        handle_break_block_event_xsprite_chunk,
-                    ),
+                    (handle_place_block_event, global_block_breaker),
                     global_block_placer,
                     apply_deferred,
                 )
@@ -111,7 +106,7 @@ fn sort_actions(
     target_block: Res<TargetBlock>,
     mut prime_action_reader: EventReader<PrimeAction>,
     mut second_action_reader: EventReader<SecondAction>,
-    mut break_block_writer: EventWriter<BlockBreakEvent>,
+    mut break_block_global_sender: EventWriter<BreakBlockGlobalEvent>,
     mut place_block_writer: EventWriter<BlockPlaceEvent>,
     inv: Res<Inventory>,
 ) {
@@ -119,10 +114,11 @@ fn sort_actions(
         if matches!(prime_action.action_type, ActionType::Start)
             && target_block.ignore_flag == false
         {
-            break_block_writer.send(BlockBreakEvent(
-                target_block.target_entity,
-                target_block.block_index,
-            ));
+            break_block_global_sender.send(BreakBlockGlobalEvent {
+                chunk_entity: Some(target_block.target_entity),
+                chunk_pos: None,
+                block_index: target_block.block_index,
+            });
         }
     }
     for second_action in second_action_reader.read() {
@@ -148,6 +144,7 @@ pub fn send_world_updates_surrounding_blocks(
     block_index: usize,
     chunk_pos: ChunkCords,
     world_block_update_sender: &mut EventWriter<WorldBlockUpdate>,
+    block_update: BlockUpdate,
 ) {
     for (adj_block_index, adj_block_chunk) in adj_blocks(block_index, chunk_pos, CHUNK_DIMS) {
         world_block_update_sender.send(WorldBlockUpdate {
@@ -159,7 +156,7 @@ pub fn send_world_updates_surrounding_blocks(
     world_block_update_sender.send(WorldBlockUpdate {
         block_index,
         chunk_pos,
-        block_update: None,
+        block_update: Some(block_update),
     });
 }
 
