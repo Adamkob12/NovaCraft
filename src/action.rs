@@ -1,13 +1,16 @@
 pub use crate::blocks::*;
+use crate::chunk::{ChunkCords, CHUNK_DIMS};
 use crate::inventory::Inventory;
 pub use crate::player::*;
 pub use crate::prelude::*;
+use crate::utils::adj_blocks;
 
 mod action_utils;
 mod break_blocks;
 mod place_blocks;
 
 use action_utils::*;
+pub use break_blocks::BlockBreakEvent;
 use break_blocks::*;
 use place_blocks::*;
 
@@ -138,6 +141,25 @@ fn sort_actions(
             }
         }
     }
+}
+
+pub fn send_world_updates_surrounding_blocks(
+    block_index: usize,
+    chunk_pos: ChunkCords,
+    world_block_update_sender: &mut EventWriter<WorldBlockUpdate>,
+) {
+    for (adj_block_index, adj_block_chunk) in adj_blocks(block_index, chunk_pos, CHUNK_DIMS) {
+        world_block_update_sender.send(WorldBlockUpdate {
+            block_index: adj_block_index,
+            chunk_pos: adj_block_chunk,
+            block_update: None,
+        });
+    }
+    world_block_update_sender.send(WorldBlockUpdate {
+        block_index,
+        chunk_pos,
+        block_update: None,
+    });
 }
 
 impl Default for ActionKeyBinds {

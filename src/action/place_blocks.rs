@@ -42,7 +42,7 @@ pub(super) fn handle_place_block_event(
                     block: *block_to_place,
                     chunk_pos,
                     block_index,
-                })
+                });
             }
         }
     }
@@ -50,6 +50,7 @@ pub(super) fn handle_place_block_event(
 
 pub(super) fn global_block_placer(
     mut global_block_place_events: EventReader<PlaceBlockGlobalEvent>,
+    mut world_block_update_sender: EventWriter<WorldBlockUpdate>,
     mut commands: Commands,
     chunk_map: Res<ChunkMap>,
     breg: Res<BlockRegistry>,
@@ -99,6 +100,11 @@ pub(super) fn global_block_placer(
                     asl2ac(&mut commands, *block_pos, *chunk_pos, &chunk_map, len);
                 }
             }
+            send_world_updates_surrounding_blocks(
+                *block_pos,
+                *chunk_pos,
+                &mut world_block_update_sender,
+            );
         }
     }
 }

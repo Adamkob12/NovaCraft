@@ -1,15 +1,27 @@
-use crate::prelude::*;
+use crate::{mesh_utils::ChunkCords, prelude::*};
 
 pub mod blockreg;
 mod id;
-mod properties;
+pub mod properties;
 mod xsprite_mesh;
 
 use std::fmt;
 
-use self::blockreg::BlockRegistry;
+use self::{blockreg::BlockRegistry, properties::BlockPropertyRegistry};
 
 pub type BlockId = u16;
+
+#[derive(Event)]
+pub struct WorldBlockUpdate {
+    pub chunk_pos: ChunkCords,
+    pub block_index: usize,
+    pub block_update: Option<BlockUpdate>,
+}
+
+pub enum BlockUpdate {
+    Broken,
+    Placed,
+}
 
 pub struct BlocksPlugin;
 
@@ -22,7 +34,7 @@ pub(super) const ALPHA: f32 = 1.0;
 pub(super) const GREENERY_SCALE: f32 = 0.85;
 
 #[repr(u16)]
-#[derive(Eq, PartialEq, Clone, Copy)]
+#[derive(Eq, PartialEq, Clone, Copy, Component)]
 pub enum Block {
     AIR = 0,
     DIRT = 1,
@@ -53,6 +65,8 @@ impl fmt::Debug for Block {
 
 impl Plugin for BlocksPlugin {
     fn build(&self, app: &mut App) {
-        app.init_resource::<BlockRegistry>();
+        app.add_event::<WorldBlockUpdate>();
+        app.init_resource::<BlockRegistry>()
+            .init_resource::<BlockPropertyRegistry>();
     }
 }

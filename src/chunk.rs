@@ -1,3 +1,4 @@
+mod block_update;
 mod chunk_queue;
 mod introduce;
 mod misc;
@@ -12,6 +13,7 @@ use crate::terrain::TerrainConfig;
 use crate::{blocks::Block, utils::get_neighboring_chunk_cords};
 use bevy::utils::hashbrown::HashMap;
 use bevy_xpbd_3d::prelude::AsyncCollider;
+use block_update::*;
 use smooth_lighting::*;
 use std::sync::{Arc, RwLock};
 
@@ -162,7 +164,7 @@ impl Plugin for ChunkPlugin {
         .add_systems(PostUpdate, (update_close_chunks, insert_collider_for_close_chunks))
         .add_systems(
             PostUpdate,
-            ((connect_chunks, introduce_neighboring_chunks, apply_smooth_lighting_after_introduce).run_if(
+            ((connect_chunks, introduce_neighboring_chunks, apply_smooth_lighting_after_introduce, handle_block_updates).run_if(
                 not(any_with_component::<ComputeChunk>())/* .and_then(resource_changed::<OneIn2>()) */,
             ),),
         )

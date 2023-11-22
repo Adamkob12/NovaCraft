@@ -97,7 +97,10 @@ pub(super) fn insert_collider_for_close_chunks(
                     )),
                     CollisionLayers::new(
                         pproperties.0.clone(),
-                        [crate::player::RigidLayer::Player],
+                        [
+                            crate::player::RigidLayer::Player,
+                            crate::player::RigidLayer::FallingBlock,
+                        ],
                     ),
                 ));
             }

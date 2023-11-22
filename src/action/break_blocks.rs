@@ -10,6 +10,7 @@ pub struct BlockBreakEvent(pub Entity, pub usize);
 pub(super) fn handle_break_block_event(
     mut commands: Commands,
     mut break_block_event_reader: EventReader<BlockBreakEvent>,
+    mut world_block_update_sender: EventWriter<WorldBlockUpdate>,
     chunk_map: Res<ChunkMap>,
     child_chunk_query: Query<(&MainCulledMesh, &Parent)>,
     parent_chunk_query: Query<(&Grid, &Cords, &MainChild)>,
@@ -65,6 +66,11 @@ pub(super) fn handle_break_block_event(
                 );
                 commands.entity(*break_entity).insert(ToUpdate);
                 asl2ac(&mut commands, *break_index, *cords, chunk_map.as_ref(), len);
+                send_world_updates_surrounding_blocks(
+                    *break_index,
+                    *cords,
+                    &mut world_block_update_sender,
+                );
             }
         }
     }
@@ -74,11 +80,12 @@ pub(super) fn handle_break_block_event_xsprite_chunk(
     mut commands: Commands,
     mut break_block_event_reader: EventReader<BlockBreakEvent>,
     child_chunk_query: Query<(&XSpriteMesh, &Parent)>,
-    parent_chunk_query: Query<&Grid>,
+    parent_chunk_query: Query<(&Grid, &Cords)>,
+    mut world_block_update_sender: EventWriter<WorldBlockUpdate>,
 ) {
     for BlockBreakEvent(break_entity, break_index) in break_block_event_reader.read() {
         if let Ok((XSpriteMesh(metadata), parent)) = child_chunk_query.get(*break_entity) {
-            if let Ok(Grid(grid)) = parent_chunk_query.get(parent.get()) {
+            if let Ok((Grid(grid), Cords(cords))) = parent_chunk_query.get(parent.get()) {
                 let this_grid = grid.read().unwrap();
                 let block_to_break = this_grid[*break_index];
                 metadata.write().unwrap().log.push((
@@ -89,6 +96,11 @@ pub(super) fn handle_break_block_event_xsprite_chunk(
                 drop(this_grid);
                 grid.write().unwrap()[*break_index] = Block::AIR;
                 commands.entity(*break_entity).insert(ToUpdate);
+                send_world_updates_surrounding_blocks(
+                    *break_index,
+                    *cords,
+                    &mut world_block_update_sender,
+                );
             }
         }
     }

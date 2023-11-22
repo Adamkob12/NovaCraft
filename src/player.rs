@@ -59,6 +59,7 @@ pub struct MovementSettings {
 #[derive(PhysicsLayer, Copy, Clone)]
 pub enum RigidLayer {
     Player,
+    FallingBlock,
     Ground,
     GroundNonCollidable,
     GroundNonBreakable,

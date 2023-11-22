@@ -143,9 +143,6 @@ pub fn update_xsprite_mesh(
 fn remove_xsprite_voxel(mesh: &mut Mesh, md: &mut XSpriteVIVI, index: usize) {
     let (vertex_start, vertex_end, index_start, index_end) = md[index];
     let last = vertex_end == mesh.count_vertices();
-    if last {
-        dbg!(vertex_end);
-    }
     for (_, vav) in mesh.attributes_mut() {
         for vertex in (vertex_start..vertex_end).rev() {
             vav.swap_remove(vertex);
