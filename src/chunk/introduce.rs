@@ -1,4 +1,4 @@
-use super::*;
+use super::{chunkmd::CMMD, *};
 use crate::blocks::blockreg::BlockRegistry;
 
 // "Introduce" means cull the sides between the chunks (the intersection). And apply Smooth
@@ -6,7 +6,7 @@ use crate::blocks::blockreg::BlockRegistry;
 pub(super) fn introduce_neighboring_chunks(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    mesh_query: Query<(&Handle<Mesh>, &MainCulledMesh)>,
+    mesh_query: Query<(&Handle<Mesh>, &CMMD)>,
     mut to_introduce_query: Query<(Entity, &Children, &mut ToIntroduce, &AdjChunkGrids)>,
     breg: Res<BlockRegistry>,
 ) {
@@ -20,7 +20,7 @@ pub(super) fn introduce_neighboring_chunks(
         let mut to_remove = [false; 8];
         for (_adj_cords, direction) in to_introduce.0.iter() {
             'A: for child in children {
-                if let Ok((mesh_handle, MainCulledMesh(metadata))) = mesh_query.get(*child) {
+                if let Ok((mesh_handle, metadata)) = mesh_query.get(*child) {
                     let mesh_ref_mut = meshes.get_mut(mesh_handle).unwrap();
                     if let Some(adj_grid) = match direction {
                         North => &adj_chunk_grids.north,
@@ -37,7 +37,12 @@ pub(super) fn introduce_neighboring_chunks(
                                 introduce_adjacent_chunks(
                                     Arc::clone(&breg).as_ref(),
                                     mesh_ref_mut,
-                                    &mut metadata.write().expect("a"),
+                                    &mut metadata
+                                        .0
+                                        .write()
+                                        .expect("a")
+                                        .extract_meshmd_mut()
+                                        .unwrap(),
                                     (*direction).into(),
                                     adj_grid.read().expect("b").as_ref(),
                                 );

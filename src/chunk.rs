@@ -1,5 +1,6 @@
 mod block_update;
 mod chunk_queue;
+pub mod chunkmd;
 mod falling_block;
 mod introduce;
 mod misc;
@@ -37,9 +38,9 @@ pub const CHUNK_TOTAL_BLOCKS: usize = HEIGHT * LENGTH * WIDTH;
 pub const RENDER_DISTANCE: i32 = 12;
 
 pub const DEFAULT_SL: Option<SmoothLightingParameters> = Some(SmoothLightingParameters {
-    intensity: 0.34,
+    intensity: 0.37,
     max: 0.95,
-    smoothing: 1.35,
+    smoothing: 1.0,
     apply_at_gen: false,
 });
 
@@ -106,10 +107,10 @@ pub struct ToUpdate;
 pub struct ToIntroduce(pub Vec<(ChunkCords, Direction)>);
 
 #[derive(Component)]
-pub struct MainCulledMesh(pub RwLock<MeshMD<Block>>);
+pub struct CubeChunk;
 
 #[derive(Component)]
-pub struct XSpriteMesh(pub RwLock<XSpriteMetaData>);
+pub struct XSpriteChunk;
 
 #[derive(Resource)]
 pub struct BlockMaterial(Handle<StandardMaterial>);
@@ -159,7 +160,7 @@ impl Plugin for ChunkPlugin {
                 queue_spawn_despawn_chunks,
                 dequeue_all_chunks.run_if(resource_changed::<ChunkQueue>()),
                 handle_chunk_spawn_tasks,
-                ((update_chunks, update_xsprite_chunks), apply_deferred,
+                ((update_cube_chunks, update_xsprite_chunks), apply_deferred,
                 (apply_smooth_lighting_after_update, apply_smooth_lighting_edgecases)).chain()
             ),
         )
