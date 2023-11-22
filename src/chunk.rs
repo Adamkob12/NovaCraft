@@ -1,21 +1,25 @@
+mod block_update;
 mod chunk_queue;
+mod falling_block;
 mod introduce;
 mod misc;
 mod smooth_lighting;
 mod spawn;
 mod update_chunks;
 
-pub(super) use self::chunk_queue::ComputeChunk;
-pub(super) use crate::mesh_utils::xsprite_mesh::*;
-pub(super) use crate::prelude::*;
+pub use self::chunk_queue::ComputeChunk;
+use crate::mesh_utils::xsprite_mesh::*;
+use crate::prelude::*;
 use crate::terrain::TerrainConfig;
-pub(super) use crate::{blocks::Block, utils::get_neighboring_chunk_cords};
-pub(super) use bevy::utils::hashbrown::HashMap;
+use crate::{blocks::Block, utils::get_neighboring_chunk_cords};
+use bevy::utils::hashbrown::HashMap;
 use bevy_xpbd_3d::prelude::AsyncCollider;
+use block_update::*;
 use smooth_lighting::*;
-pub(super) use std::sync::{Arc, RwLock};
+use std::sync::{Arc, RwLock};
 
 use chunk_queue::*;
+pub use falling_block::*;
 use introduce::*;
 use misc::*;
 use rand::prelude::*;
@@ -33,9 +37,9 @@ pub const CHUNK_TOTAL_BLOCKS: usize = HEIGHT * LENGTH * WIDTH;
 pub const RENDER_DISTANCE: i32 = 12;
 
 pub const DEFAULT_SL: Option<SmoothLightingParameters> = Some(SmoothLightingParameters {
-    intensity: 0.40,
-    max: 0.9,
-    smoothing: 1.0,
+    intensity: 0.34,
+    max: 0.95,
+    smoothing: 1.35,
     apply_at_gen: false,
 });
 
@@ -162,7 +166,7 @@ impl Plugin for ChunkPlugin {
         .add_systems(PostUpdate, (update_close_chunks, insert_collider_for_close_chunks))
         .add_systems(
             PostUpdate,
-            ((connect_chunks, introduce_neighboring_chunks, apply_smooth_lighting_after_introduce).run_if(
+            ((connect_chunks, introduce_neighboring_chunks, apply_smooth_lighting_after_introduce, handle_block_updates).run_if(
                 not(any_with_component::<ComputeChunk>())/* .and_then(resource_changed::<OneIn2>()) */,
             ),),
         )

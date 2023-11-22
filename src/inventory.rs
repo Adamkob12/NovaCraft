@@ -197,6 +197,7 @@ impl Plugin for InventoryPlugin {
                 .with_bar_slot(1, InventorySlot::Stack(Block::STONE, 20))
                 .with_bar_slot(2, InventorySlot::Stack(Block::GRASS, 5))
                 .with_bar_slot(3, InventorySlot::Stack(Block::GREENERY, 5))
+                .with_bar_slot(4, InventorySlot::Stack(Block::SAND, 5))
                 .with_pack_slot(1, InventorySlot::Single(Block::DIRT)),
         );
         app.add_systems(PreUpdate, inventory_input);

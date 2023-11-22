@@ -1,11 +1,29 @@
+use crate::{mesh_utils::ChunkCords, prelude::*};
+
 pub mod blockreg;
 mod id;
-mod properties;
+pub mod properties;
 mod xsprite_mesh;
 
 use std::fmt;
 
+use self::{blockreg::BlockRegistry, properties::BlockPropertyRegistry};
+
 pub type BlockId = u16;
+
+#[derive(Event)]
+pub struct WorldBlockUpdate {
+    pub chunk_pos: ChunkCords,
+    pub block_index: usize,
+    pub block_update: Option<BlockUpdate>,
+}
+
+pub enum BlockUpdate {
+    Broken,
+    Placed,
+}
+
+pub struct BlocksPlugin;
 
 pub const VOXEL_DIMS: [f32; 3] = [1.0, 1.0, 1.0];
 pub(super) const VOXEL_CENTER: [f32; 3] = [0.0, 0.0, 0.0];
@@ -16,13 +34,14 @@ pub(super) const ALPHA: f32 = 1.0;
 pub(super) const GREENERY_SCALE: f32 = 0.85;
 
 #[repr(u16)]
-#[derive(Eq, PartialEq, Clone, Copy)]
+#[derive(Eq, PartialEq, Clone, Copy, Component)]
 pub enum Block {
     AIR = 0,
     DIRT = 1,
     GRASS = 2,
     STONE = 3,
     GREENERY = 4,
+    SAND = 5,
 }
 
 impl Into<&'static str> for Block {
@@ -33,6 +52,7 @@ impl Into<&'static str> for Block {
             Self::GRASS => "Grass",
             Self::STONE => "Stone",
             Self::GREENERY => "Greenery",
+            Self::SAND => "Sand",
         }
     }
 }
@@ -40,5 +60,13 @@ impl Into<&'static str> for Block {
 impl fmt::Debug for Block {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "NovaCraft::Block::{}", Into::<&'static str>::into(*self))
+    }
+}
+
+impl Plugin for BlocksPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_event::<WorldBlockUpdate>();
+        app.init_resource::<BlockRegistry>()
+            .init_resource::<BlockPropertyRegistry>();
     }
 }

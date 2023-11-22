@@ -26,7 +26,6 @@ pub mod visuals;
 #[allow(unused_imports)]
 use bevy::{pbr::wireframe::WireframePlugin, window::WindowResolution};
 use bevy_xpbd_3d::prelude::*;
-use blocks::blockreg::BlockRegistry;
 use prelude::*;
 
 fn main() {
@@ -55,9 +54,9 @@ fn main() {
         console::GlobalConsolePlugin,
         visuals::VisualsPlugin,
         inventory::InventoryPlugin,
+        blocks::BlocksPlugin,
         WireframePlugin,
-    ))
-    .init_resource::<BlockRegistry>();
+    ));
 
     app.run();
 }
