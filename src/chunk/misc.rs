@@ -1,5 +1,5 @@
 use super::{chunk_queue::ChunkQueue, *};
-use crate::utils::chunk_distance;
+use crate::{action::RigidLayer, utils::chunk_distance};
 use bevy_xpbd_3d::prelude::{CollisionLayers, ComputedCollider, RigidBody, TriMeshFlags};
 
 pub(super) fn reload_all(
@@ -95,13 +95,7 @@ pub(super) fn insert_collider_for_close_chunks(
                     AsyncCollider(ComputedCollider::TriMeshWithFlags(
                         TriMeshFlags::MERGE_DUPLICATE_VERTICES,
                     )),
-                    CollisionLayers::new(
-                        pproperties.0.clone(),
-                        [
-                            crate::player::RigidLayer::Player,
-                            crate::player::RigidLayer::FallingBlock,
-                        ],
-                    ),
+                    CollisionLayers::all_masks::<RigidLayer>().add_groups(pproperties.0.clone()),
                 ));
             }
         }

@@ -1,5 +1,6 @@
 mod block_update;
 mod chunk_queue;
+mod falling_block;
 mod introduce;
 mod misc;
 mod smooth_lighting;
@@ -18,6 +19,7 @@ use smooth_lighting::*;
 use std::sync::{Arc, RwLock};
 
 use chunk_queue::*;
+pub use falling_block::*;
 use introduce::*;
 use misc::*;
 use rand::prelude::*;

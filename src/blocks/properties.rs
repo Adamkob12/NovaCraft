@@ -1,5 +1,8 @@
 use super::*;
-const BLOCK_DENSITY: f32 = 1.0;
+const BLOCK_DENSITY: f32 = 100.0;
+
+#[derive(Component)]
+pub struct FallingBlock;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum BlockProperty {

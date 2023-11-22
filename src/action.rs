@@ -1,5 +1,5 @@
 pub use crate::blocks::*;
-use crate::chunk::{ChunkCords, CHUNK_DIMS};
+use crate::chunk::{follow_falling_block, ChunkCords, CHUNK_DIMS};
 use crate::inventory::Inventory;
 pub use crate::player::*;
 pub use crate::prelude::*;
@@ -12,7 +12,7 @@ mod place_blocks;
 use action_utils::*;
 pub use break_blocks::BlockBreakEvent;
 use break_blocks::*;
-use place_blocks::*;
+pub use place_blocks::*;
 
 pub struct ActionPlugin;
 
@@ -29,6 +29,7 @@ impl Plugin for ActionPlugin {
                 (
                     broadcast_actions,
                     sort_actions,
+                    follow_falling_block,
                     (
                         handle_break_block_event,
                         handle_place_block_event,
