@@ -1,6 +1,7 @@
 pub mod controller;
 pub mod movement;
 
+use bevy_atmosphere::prelude::*;
 use std::f32::consts::PI;
 
 use crate::chunk::{
@@ -103,6 +104,7 @@ pub(super) fn setup_player(mut commands: Commands) {
             ..Default::default()
         })
         .insert(PlayerCamera)
+        .insert(AtmosphereCamera::default())
         .insert(TemporalAntiAliasBundle::default())
         .insert(ScreenSpaceAmbientOcclusionBundle {
             settings: ScreenSpaceAmbientOcclusionSettings {
