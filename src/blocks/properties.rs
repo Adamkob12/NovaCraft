@@ -8,6 +8,7 @@ pub struct FallingBlock;
 pub enum BlockProperty {
     AffectedByGravity,
     YieldToFallingBlock,
+    MustBeOnTopOf(Block),
 }
 
 #[derive(Resource)]
@@ -27,7 +28,10 @@ impl Default for BlockPropertyRegistry {
             dirt: vec![],
             grass: vec![],
             stone: vec![],
-            greenery: vec![BlockProperty::YieldToFallingBlock],
+            greenery: vec![
+                BlockProperty::YieldToFallingBlock,
+                BlockProperty::MustBeOnTopOf(Block::GRASS),
+            ],
             sand: vec![BlockProperty::AffectedByGravity],
         }
     }

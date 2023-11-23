@@ -98,7 +98,7 @@ pub(super) fn setup_player(mut commands: Commands) {
             transform: Transform::from_xyz(0.0, CAMERA_HEIGHT_OFFSET, 0.0),
             projection: Projection::Perspective(PerspectiveProjection {
                 fov: FOV,
-                far: (RENDER_DISTANCE + 1) as f32 * WIDTH.max(LENGTH) as f32,
+                far: (RENDER_DISTANCE + 3) as f32 * WIDTH.max(LENGTH) as f32,
                 ..Default::default()
             }),
             ..Default::default()
@@ -113,10 +113,10 @@ pub(super) fn setup_player(mut commands: Commands) {
             ..Default::default()
         })
         .insert(FogSettings {
-            color: Color::rgb(0.85, 0.95, 1.0),
+            color: Color::rgb(0.65, 0.95, 1.0),
             falloff: FogFalloff::Linear {
                 start: ((RENDER_DISTANCE - 2) * WIDTH as i32) as f32,
-                end: ((RENDER_DISTANCE - 1) * WIDTH as i32) as f32,
+                end: ((RENDER_DISTANCE + 1) * WIDTH as i32) as f32,
             },
             ..Default::default()
         })
