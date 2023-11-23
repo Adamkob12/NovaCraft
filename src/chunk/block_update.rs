@@ -1,7 +1,8 @@
 use crate::action::BreakBlockGlobalEvent;
-use crate::action::{
+use crate::blocks::{
     blockreg::BlockRegistry,
-    properties::{BlockProperty, BlockPropertyRegistry},
+    existence_conditions::*,
+    properties::{BlockProperty, BlockPropertyRegistry, PassiveProperty, PhysicalProperty},
     WorldBlockUpdate,
 };
 
@@ -12,6 +13,7 @@ pub(super) fn handle_block_updates(
     mut break_block_global_sender: EventWriter<BreakBlockGlobalEvent>,
     mut commands: Commands,
     chunk_map: Res<ChunkMap>,
+    exconds: Res<ExistenceConditions>,
     bpreg: Res<BlockPropertyRegistry>,
     breg: Res<BlockRegistry>,
     grids: Query<(&Grid, &MainChild, &XSpriteChild), With<Chunk>>,
@@ -39,8 +41,11 @@ pub(super) fn handle_block_updates(
             .map_or(Block::AIR, |i| grid.read().unwrap()[i]);
         for property in bpreg.iter_properties(&block) {
             match property {
-                BlockProperty::AffectedByGravity => {
-                    if bpreg.contains_property(&block_below, &BlockProperty::YieldToFallingBlock) {
+                BlockProperty::Physical(PhysicalProperty::AffectedByGravity) => {
+                    if bpreg.contains_property(
+                        &block_below,
+                        &BlockProperty::Passive(PassiveProperty::YieldToFallingBlock),
+                    ) {
                         break_block_global_sender.send(
                             BreakBlockGlobalEvent::new(*block_index)
                                 .with_chunk_entity(*block_entity),
@@ -56,16 +61,34 @@ pub(super) fn handle_block_updates(
                         );
                     }
                 }
-                BlockProperty::MustBeOnTopOf(block) => {
-                    if block_below != *block {
-                        break_block_global_sender.send(
-                            BreakBlockGlobalEvent::new(*block_index)
-                                .with_chunk_entity(*block_entity),
-                        )
-                    }
-                }
+                // BlockProperty::ConditionalExistence(ConditionalExistence::BlockUnderMust(cond)) => {
+                //     if !cond(&block_below) {
+                //         break_block_global_sender.send(
+                //             BreakBlockGlobalEvent::new(*block_index)
+                //                 .with_chunk_entity(*block_entity),
+                //         )
+                //     }
+                // }
                 _ => {}
             }
+        }
+        let mut break_block = false;
+        match exconds.get_condition(&block) {
+            // The block always exists
+            ConditionalExistence::Always => {}
+            // If the block can never exist, we break it.
+            ConditionalExistence::Never => break_block = true,
+            ConditionalExistence::BlockUnderMust(cond) => {
+                if !cond(block_below) {
+                    break_block = true
+                }
+            }
+            // TODO: support chained conditions (ie: ConditionalExistence::AND / OR)
+            _ => {}
+        }
+        if break_block {
+            break_block_global_sender
+                .send(BreakBlockGlobalEvent::new(*block_index).with_chunk_entity(*block_entity))
         }
     }
 }

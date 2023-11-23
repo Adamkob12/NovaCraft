@@ -4,11 +4,27 @@ const BLOCK_DENSITY: f32 = 100.0;
 #[derive(Component)]
 pub struct FallingBlock;
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum BlockProperty {
+    Physical(PhysicalProperty),
+    Passive(PassiveProperty),
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum PhysicalProperty {
     AffectedByGravity,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum PassiveProperty {
     YieldToFallingBlock,
-    MustBeOnTopOf(Block),
+}
+
+#[derive(Clone, Copy)]
+pub enum PerceptibleProperty {
+    LightSource(PointLight),
+    // TODO: audio stuff
+    AudioSource,
 }
 
 #[derive(Resource)]
@@ -24,15 +40,17 @@ pub struct BlockPropertyRegistry {
 impl Default for BlockPropertyRegistry {
     fn default() -> Self {
         BlockPropertyRegistry {
-            air: vec![BlockProperty::YieldToFallingBlock],
+            air: vec![BlockProperty::Passive(PassiveProperty::YieldToFallingBlock)],
             dirt: vec![],
             grass: vec![],
             stone: vec![],
             greenery: vec![
-                BlockProperty::YieldToFallingBlock,
-                BlockProperty::MustBeOnTopOf(Block::GRASS),
+                BlockProperty::Passive(PassiveProperty::YieldToFallingBlock),
+                // BlockProperty::ConditionalExistence(ConditionalExistence::BlockUnderMust(
+                //     Box::new(|block| *block == Block::GRASS),
+                // )),
             ],
-            sand: vec![BlockProperty::AffectedByGravity],
+            sand: vec![BlockProperty::Physical(PhysicalProperty::AffectedByGravity)],
         }
     }
 }

@@ -1,13 +1,17 @@
 use crate::{mesh_utils::ChunkCords, prelude::*};
 
 pub mod blockreg;
+pub mod existence_conditions;
 mod id;
 pub mod properties;
 mod xsprite_mesh;
 
 use std::fmt;
 
-use self::{blockreg::BlockRegistry, properties::BlockPropertyRegistry};
+use self::{
+    blockreg::BlockRegistry, existence_conditions::ExistenceConditions,
+    properties::BlockPropertyRegistry,
+};
 
 pub type BlockId = u16;
 
@@ -67,6 +71,7 @@ impl Plugin for BlocksPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<WorldBlockUpdate>();
         app.init_resource::<BlockRegistry>()
-            .init_resource::<BlockPropertyRegistry>();
+            .init_resource::<BlockPropertyRegistry>()
+            .init_resource::<ExistenceConditions>();
     }
 }
