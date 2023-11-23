@@ -27,8 +27,11 @@ pub(super) fn handle_place_block_event(
     child_chunk_query: Query<&Parent, With<ChunkChild>>,
     parent_chunk_query: Query<&Cords>,
     player_q: Query<(&Transform, &Collider), With<PhysicalPlayer>>,
+    blocks_q: Query<(&Block, &Collider, &Transform)>,
 ) {
-    for BlockPlaceEvent(entity, index, face, block_to_place) in place_block_event_reader.read() {
+    'event_loop: for BlockPlaceEvent(entity, index, face, block_to_place) in
+        place_block_event_reader.read()
+    {
         if let Ok(parent) = child_chunk_query.get(*entity) {
             if let Ok(Cords(cords)) = parent_chunk_query.get(parent.get()) {
                 let (block_index, chunk_pos) = {
@@ -42,16 +45,17 @@ pub(super) fn handle_place_block_event(
                         (neighbor, new_cords)
                     }
                 };
-                // check if the to-be placed block touches the player
+                // The global positin of the block
+                let block_global_pos =
+                    to_global_pos(block_index, chunk_pos, VOXEL_DIMS.into(), CHUNK_DIMS);
+                // check if the to-be placed block overlaps with the player
                 if BlockPropertyRegistry::is_collidable(block_to_place) {
-                    let (tran, collider) = player_q.get_single().unwrap();
-                    let block_global_pos =
-                        to_global_pos(block_index, chunk_pos, VOXEL_DIMS.into(), CHUNK_DIMS);
+                    let (transform, collider) = player_q.get_single().unwrap();
                     if contact(
                         collider,
-                        tran.translation,
+                        transform.translation,
                         Quat::IDENTITY,
-                        &Collider::cuboid(0.99, 0.90, 0.99),
+                        &Collider::cuboid(0.99, 0.85, 0.99),
                         block_global_pos,
                         Quat::IDENTITY,
                         0.0,
@@ -60,7 +64,30 @@ pub(super) fn handle_place_block_event(
                     .is_some()
                     {
                         info!("Attempt to place block that overlaps with player was stopped.");
-                        continue;
+                        continue 'event_loop;
+                    }
+                }
+
+                // check if the to-be placed block overlaps with any current out-of-chunk blocks
+                for (block, collider, transform) in blocks_q.iter() {
+                    // In the future, this might be a condition about the block itself.
+                    dbg!(block);
+                    if true {
+                        if contact(
+                            collider,
+                            transform.translation,
+                            Quat::IDENTITY,
+                            &Collider::cuboid(0.99, 0.99, 0.99),
+                            block_global_pos,
+                            Quat::IDENTITY,
+                            0.0,
+                        )
+                        .unwrap()
+                        .is_some()
+                        {
+                            info!("Attempt to place block that overlaps with another block was stopped.");
+                            continue 'event_loop;
+                        }
                     }
                 }
 
