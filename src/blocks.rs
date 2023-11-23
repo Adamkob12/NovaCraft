@@ -1,9 +1,10 @@
 use crate::{mesh_utils::ChunkCords, prelude::*};
 
+mod block_descriptor;
 pub mod blockreg;
 pub mod existence_conditions;
-mod id;
 pub mod properties;
+mod registries;
 mod xsprite_mesh;
 
 use std::fmt;
