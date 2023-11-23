@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use bevy_meshem::prelude::Face;
+use novacraft_meshing_backend::prelude::Face;
 
 use super::{
     existence_conditions::ConditionalExistence,
