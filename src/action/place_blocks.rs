@@ -1,9 +1,14 @@
+use bevy_xpbd_3d::prelude::contact_query::contact;
+use bevy_xpbd_3d::prelude::Collider;
+
 use crate::chunk::{Chunk, ChunkCords, ChunkMap, Cords, Grid, ToUpdate, CHUNK_DIMS};
 use crate::mesh_utils::chunkmd::CMMD;
 use crate::mesh_utils::{ChunkChild, CubeChunk, XSpriteChunk};
 use crate::prelude::notical;
+use crate::utils::to_global_pos;
 
 use super::blockreg::BlockRegistry;
+use super::properties::BlockPropertyRegistry;
 use super::*;
 
 #[derive(Event)]
@@ -21,6 +26,7 @@ pub(super) fn handle_place_block_event(
     mut global_block_place_event_sender: EventWriter<PlaceBlockGlobalEvent>,
     child_chunk_query: Query<&Parent, With<ChunkChild>>,
     parent_chunk_query: Query<&Cords>,
+    player_q: Query<(&Transform, &Collider), With<PhysicalPlayer>>,
 ) {
     for BlockPlaceEvent(entity, index, face, block_to_place) in place_block_event_reader.read() {
         if let Ok(parent) = child_chunk_query.get(*entity) {
@@ -36,6 +42,29 @@ pub(super) fn handle_place_block_event(
                         (neighbor, new_cords)
                     }
                 };
+                // check if the to-be placed block touches the player
+                if BlockPropertyRegistry::is_collidable(block_to_place) {
+                    let (tran, collider) = player_q.get_single().unwrap();
+                    let block_global_pos =
+                        to_global_pos(block_index, chunk_pos, VOXEL_DIMS.into(), CHUNK_DIMS);
+                    if contact(
+                        collider,
+                        tran.translation,
+                        Quat::IDENTITY,
+                        &Collider::cuboid(0.99, 0.90, 0.99),
+                        block_global_pos,
+                        Quat::IDENTITY,
+                        0.0,
+                    )
+                    .unwrap()
+                    .is_some()
+                    {
+                        info!("Attempt to place block that overlaps with player was stopped.");
+                        continue;
+                    }
+                }
+
+                // send the global block place event
                 global_block_place_event_sender.send(PlaceBlockGlobalEvent {
                     block: *block_to_place,
                     chunk_pos,
@@ -49,6 +78,7 @@ pub(super) fn handle_place_block_event(
 pub(super) fn global_block_placer(
     mut global_block_place_events: EventReader<PlaceBlockGlobalEvent>,
     mut world_block_update_sender: EventWriter<WorldBlockUpdate>,
+    mut break_block_global_sender: EventWriter<BreakBlockGlobalEvent>,
     mut commands: Commands,
     breg: Res<BlockRegistry>,
     chunk_map: Res<ChunkMap>,
@@ -62,6 +92,15 @@ pub(super) fn global_block_placer(
         block_index: block_pos,
     } in global_block_place_events.read()
     {
+        // Placing an Air block is equivalent to breaking the block
+        if *block == Block::AIR {
+            break_block_global_sender.send(BreakBlockGlobalEvent {
+                chunk_pos: Some(*chunk_pos),
+                chunk_entity: None,
+                block_index: *block_pos,
+            });
+            continue;
+        }
         if let (Some(Grid(grid)), children) =
             chunk_map
                 .pos_to_ent

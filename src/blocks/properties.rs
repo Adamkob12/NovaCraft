@@ -66,4 +66,15 @@ impl BlockPropertyRegistry {
             _ => BLOCK_DENSITY,
         }
     }
+
+    pub fn is_collidable(block: &Block) -> bool {
+        match block {
+            Block::AIR => false,
+            Block::DIRT => true,
+            Block::GRASS => true,
+            Block::STONE => true,
+            Block::GREENERY => false,
+            Block::SAND => true,
+        }
+    }
 }
