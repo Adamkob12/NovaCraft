@@ -62,6 +62,14 @@ pub(super) fn handle_block_updates(
                         );
                     }
                 }
+                BlockProperty::MustBeOnTopOf(block) => {
+                    if block_below != *block {
+                        break_block_global_sender.send(
+                            BreakBlockGlobalEvent::new(*block_index)
+                                .with_chunk_entity(*block_entity),
+                        )
+                    }
+                }
                 _ => {}
             }
         }
