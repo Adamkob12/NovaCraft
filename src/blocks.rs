@@ -28,7 +28,7 @@ pub struct BlocksPlugin;
 pub const VOXEL_DIMS: [f32; 3] = [1.0, 1.0, 1.0];
 pub(super) const VOXEL_CENTER: [f32; 3] = [0.0, 0.0, 0.0];
 pub(super) const TEXTURE_ATLAS_DIMS: [u32; 2] = [10, 10];
-pub(super) const PADDING: f32 = 1.0 / 16.0;
+pub(super) const PADDING: f32 = 0.0;
 pub(super) const COLOR_INTENSITY: f32 = 1.0;
 pub(super) const ALPHA: f32 = 1.0;
 pub(super) const GREENERY_SCALE: f32 = 0.85;
