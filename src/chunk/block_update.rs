@@ -2,7 +2,7 @@ use crate::action::BreakBlockGlobalEvent;
 use crate::blocks::{
     blockreg::BlockRegistry,
     existence_conditions::*,
-    properties::{BlockProperty, BlockPropertyRegistry, PassiveProperty, PhysicalProperty},
+    properties::{BlockPropertyRegistry, PassiveProperty, PhysicalProperty},
     WorldBlockUpdate,
 };
 
@@ -14,7 +14,8 @@ pub(super) fn handle_block_updates(
     mut commands: Commands,
     chunk_map: Res<ChunkMap>,
     exconds: Res<ExistenceConditions>,
-    bpreg: Res<BlockPropertyRegistry>,
+    passive_preg: Res<BlockPropertyRegistry<PassiveProperty>>,
+    physical_preg: Res<BlockPropertyRegistry<PhysicalProperty>>,
     breg: Res<BlockRegistry>,
     grids: Query<(&Grid, &MainChild, &XSpriteChild), With<Chunk>>,
     main_mat: Res<BlockMaterial>,
@@ -39,13 +40,12 @@ pub(super) fn handle_block_updates(
         };
         let block_below = get_neighbor(*block_index, Bottom, CHUNK_DIMS)
             .map_or(Block::AIR, |i| grid.read().unwrap()[i]);
-        for property in bpreg.iter_properties(&block) {
+        for property in physical_preg.iter_properties(&block) {
             match property {
-                BlockProperty::Physical(PhysicalProperty::AffectedByGravity) => {
-                    if bpreg.contains_property(
-                        &block_below,
-                        &BlockProperty::Passive(PassiveProperty::YieldToFallingBlock),
-                    ) {
+                PhysicalProperty::AffectedByGravity => {
+                    if passive_preg
+                        .contains_property(&block_below, &PassiveProperty::YieldToFallingBlock)
+                    {
                         break_block_global_sender.send(
                             BreakBlockGlobalEvent::new(*block_index)
                                 .with_chunk_entity(*block_entity),
@@ -56,7 +56,7 @@ pub(super) fn handle_block_updates(
                             block_mat.clone(),
                             *block_index,
                             *chunk_pos,
-                            bpreg.get_density(&block),
+                            physical_preg.get_density(&block),
                             block,
                         );
                     }

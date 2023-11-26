@@ -1,14 +1,10 @@
-use super::*;
+use super::{block_descriptor::PropertyCollection, *};
 const BLOCK_DENSITY: f32 = 100.0;
+
+pub trait Property {}
 
 #[derive(Component)]
 pub struct FallingBlock;
-
-#[derive(Clone, PartialEq)]
-pub enum BlockProperty {
-    Physical(PhysicalProperty),
-    Passive(PassiveProperty),
-}
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum PhysicalProperty {
@@ -27,47 +23,33 @@ pub enum PerceptibleProperty {
     AudioSource,
 }
 
+impl Property for PerceptibleProperty {}
+impl Property for PassiveProperty {}
+impl Property for PhysicalProperty {}
+
 #[derive(Resource)]
-pub struct BlockPropertyRegistry {
-    air: Vec<BlockProperty>,
-    dirt: Vec<BlockProperty>,
-    grass: Vec<BlockProperty>,
-    stone: Vec<BlockProperty>,
-    greenery: Vec<BlockProperty>,
-    sand: Vec<BlockProperty>,
+pub struct BlockPropertyRegistry<P: Property> {
+    pub air: PropertyCollection<P>,
+    pub dirt: PropertyCollection<P>,
+    pub grass: PropertyCollection<P>,
+    pub stone: PropertyCollection<P>,
+    pub greenery: PropertyCollection<P>,
+    pub sand: PropertyCollection<P>,
 }
 
-impl Default for BlockPropertyRegistry {
-    fn default() -> Self {
-        BlockPropertyRegistry {
-            air: vec![BlockProperty::Passive(PassiveProperty::YieldToFallingBlock)],
-            dirt: vec![],
-            grass: vec![],
-            stone: vec![],
-            greenery: vec![
-                BlockProperty::Passive(PassiveProperty::YieldToFallingBlock),
-                // BlockProperty::ConditionalExistence(ConditionalExistence::BlockUnderMust(
-                //     Box::new(|block| *block == Block::GRASS),
-                // )),
-            ],
-            sand: vec![BlockProperty::Physical(PhysicalProperty::AffectedByGravity)],
-        }
-    }
-}
-
-impl BlockPropertyRegistry {
-    pub fn iter_properties(&self, block: &Block) -> &[BlockProperty] {
+impl<P: Property + PartialEq> BlockPropertyRegistry<P> {
+    pub fn iter_properties(&self, block: &Block) -> &[P] {
         match block {
-            Block::AIR => self.air.as_slice(),
-            Block::DIRT => self.dirt.as_slice(),
-            Block::GRASS => self.grass.as_slice(),
-            Block::STONE => self.stone.as_slice(),
-            Block::GREENERY => self.greenery.as_slice(),
-            Block::SAND => self.sand.as_slice(),
+            Block::AIR => self.air.0.as_slice(),
+            Block::DIRT => self.dirt.0.as_slice(),
+            Block::GRASS => self.grass.0.as_slice(),
+            Block::STONE => self.stone.0.as_slice(),
+            Block::GREENERY => self.greenery.0.as_slice(),
+            Block::SAND => self.sand.0.as_slice(),
         }
     }
 
-    pub fn contains_property(&self, block: &Block, property: &BlockProperty) -> bool {
+    pub fn contains_property(&self, block: &Block, property: &P) -> bool {
         match block {
             Block::AIR => self.air.contains(property),
             Block::DIRT => self.dirt.contains(property),
@@ -77,7 +59,9 @@ impl BlockPropertyRegistry {
             Block::SAND => self.sand.contains(property),
         }
     }
+}
 
+impl BlockPropertyRegistry<PhysicalProperty> {
     pub fn get_density(&self, block: &Block) -> f32 {
         match block {
             Block::AIR => 0.0,

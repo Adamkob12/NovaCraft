@@ -3,46 +3,57 @@ use novacraft_meshing_backend::prelude::Face;
 
 use super::{
     existence_conditions::ConditionalExistence,
-    properties::{PassiveProperty, PerceptibleProperty, PhysicalProperty},
+    properties::{PassiveProperty, PerceptibleProperty, PhysicalProperty, Property},
 };
 
-pub struct PhysicalProperties(pub Vec<PhysicalProperty>);
-pub struct PassiveProperties(pub Vec<PassiveProperty>);
-pub struct PerceptibleProperties(pub Vec<PerceptibleProperty>);
+pub struct PropertyCollection<T: Property>(pub Vec<T>);
 
-impl std::ops::Deref for PhysicalProperties {
-    type Target = Vec<PhysicalProperty>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
+impl<T: Property> PropertyCollection<T> {
+    pub fn empty() -> Self {
+        Self(vec![])
+    }
+
+    pub fn with_property(mut self, prop: T) -> Self {
+        self.0.push(prop);
+        self
+    }
+
+    pub fn from_property(prop: T) -> Self {
+        Self(vec![prop])
     }
 }
 
-impl std::ops::Deref for PassiveProperties {
-    type Target = Vec<PassiveProperty>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl std::ops::Deref for PerceptibleProperties {
-    type Target = Vec<PerceptibleProperty>;
+impl<T: Property> std::ops::Deref for PropertyCollection<T> {
+    type Target = Vec<T>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
 pub struct BlockDescriptor {
-    name: String,
-    mesh_gen_data: MeshGenData,
-    existence_conditions: ConditionalExistence,
-    physical_properties: PhysicalProperties,
-    passive_properties: PassiveProperties,
-    perspectible_properties: PerceptibleProperties,
+    pub mesh_gen_data: MeshGenData,
+    pub existence_conditions: ConditionalExistence,
+    pub physical_properties: PropertyCollection<PhysicalProperty>,
+    pub passive_properties: PropertyCollection<PassiveProperty>,
+    pub perceptible_properties: PropertyCollection<PerceptibleProperty>,
+}
+
+impl Default for BlockDescriptor {
+    fn default() -> Self {
+        BlockDescriptor {
+            mesh_gen_data: MeshGenData::Air,
+            existence_conditions: ConditionalExistence::Always,
+            passive_properties: PropertyCollection::<PassiveProperty>::empty(),
+            physical_properties: PropertyCollection::<PhysicalProperty>::empty(),
+            perceptible_properties: PropertyCollection::<PerceptibleProperty>::empty(),
+        }
+    }
 }
 
 pub enum MeshGenData {
     Cube(CubeTextureCords),
     XSprite(XSpriteTextureCords),
+    Air,
 }
 
 pub struct CubeTextureCords {

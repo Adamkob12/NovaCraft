@@ -1,12 +1,22 @@
 use super::*;
 
-pub type ExistenceCondition = Box<dyn Fn(Block) -> bool + Send + Sync + 'static>;
+pub type BlockCondition = Box<dyn Fn(Block) -> bool + Send + Sync + 'static>;
+
+pub trait CommonBlockCondition {
+    fn id_equals(id: BlockId) -> BlockCondition;
+}
+
+impl CommonBlockCondition for BlockCondition {
+    fn id_equals(id: BlockId) -> BlockCondition {
+        Box::new(move |block| block as BlockId == id)
+    }
+}
 
 pub enum ConditionalExistence {
     Always,
     Never,
-    BlockUnderMust(ExistenceCondition),
-    BlockToTheSideMust(Face, ExistenceCondition),
+    BlockUnderMust(BlockCondition),
+    BlockToTheSideMust(Face, BlockCondition),
     AND(Vec<ConditionalExistence>),
     OR(Vec<ConditionalExistence>),
 }
@@ -31,7 +41,7 @@ impl Default for ExistenceConditions {
             greenery: ConditionalExistence::BlockUnderMust(Box::new(|block: Block| {
                 block == Block::GRASS
             })),
-            sand: ConditionalExistence::Never,
+            sand: ConditionalExistence::Always,
         }
     }
 }

@@ -1,18 +1,17 @@
 use crate::{mesh_utils::ChunkCords, prelude::*};
 
+#[allow(non_snake_case)]
+pub mod INIT_BLOCKS;
+mod block_defs;
 mod block_descriptor;
 pub mod blockreg;
 pub mod existence_conditions;
 pub mod properties;
-mod registries;
 mod xsprite_mesh;
 
-use std::fmt;
+pub use INIT_BLOCKS::*;
 
-use self::{
-    blockreg::BlockRegistry, existence_conditions::ExistenceConditions,
-    properties::BlockPropertyRegistry,
-};
+use self::{blockreg::BlockRegistry, existence_conditions::ExistenceConditions, properties::*};
 
 pub type BlockId = u16;
 
@@ -38,41 +37,13 @@ pub(super) const COLOR_INTENSITY: f32 = 1.0;
 pub(super) const ALPHA: f32 = 1.0;
 pub(super) const GREENERY_SCALE: f32 = 0.85;
 
-#[repr(u16)]
-#[derive(Eq, PartialEq, Clone, Copy, Component)]
-pub enum Block {
-    AIR = 0,
-    DIRT = 1,
-    GRASS = 2,
-    STONE = 3,
-    GREENERY = 4,
-    SAND = 5,
-}
-
-impl Into<&'static str> for Block {
-    fn into(self) -> &'static str {
-        match self {
-            Self::AIR => "Air",
-            Self::DIRT => "Dirt",
-            Self::GRASS => "Grass",
-            Self::STONE => "Stone",
-            Self::GREENERY => "Greenery",
-            Self::SAND => "Sand",
-        }
-    }
-}
-
-impl fmt::Debug for Block {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "NovaCraft::Block::{}", Into::<&'static str>::into(*self))
-    }
-}
-
 impl Plugin for BlocksPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<WorldBlockUpdate>();
         app.init_resource::<BlockRegistry>()
-            .init_resource::<BlockPropertyRegistry>()
+            .init_resource::<BlockPropertyRegistry<PassiveProperty>>()
+            .init_resource::<BlockPropertyRegistry<PhysicalProperty>>()
+            .init_resource::<BlockPropertyRegistry<PerceptibleProperty>>()
             .init_resource::<ExistenceConditions>();
     }
 }
