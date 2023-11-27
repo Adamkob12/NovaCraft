@@ -2,8 +2,8 @@ use crate::action::BreakBlockGlobalEvent;
 use crate::blocks::{
     blockreg::BlockRegistry,
     existence_conditions::*,
-    properties::{BlockPropertyRegistry, PassiveProperty, PhysicalProperty},
-    WorldBlockUpdate,
+    properties::{PassiveProperty, PhysicalProperty},
+    BlockPropertyRegistry, WorldBlockUpdate,
 };
 
 use super::*;
@@ -61,15 +61,6 @@ pub(super) fn handle_block_updates(
                         );
                     }
                 }
-                // BlockProperty::ConditionalExistence(ConditionalExistence::BlockUnderMust(cond)) => {
-                //     if !cond(&block_below) {
-                //         break_block_global_sender.send(
-                //             BreakBlockGlobalEvent::new(*block_index)
-                //                 .with_chunk_entity(*block_entity),
-                //         )
-                //     }
-                // }
-                _ => {}
             }
         }
         let mut break_block = false;

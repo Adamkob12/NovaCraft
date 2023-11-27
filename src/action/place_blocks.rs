@@ -1,6 +1,7 @@
 use bevy_xpbd_3d::prelude::contact_query::contact;
 use bevy_xpbd_3d::prelude::Collider;
 
+use crate::blocks::BlockPropertyRegistry;
 use crate::chunk::{Chunk, ChunkCords, ChunkMap, Cords, Grid, ToUpdate, CHUNK_DIMS};
 use crate::mesh_utils::chunkmd::CMMD;
 use crate::mesh_utils::{ChunkChild, CubeChunk, XSpriteChunk};
@@ -8,7 +9,6 @@ use crate::prelude::notical;
 use crate::utils::to_global_pos;
 
 use super::blockreg::BlockRegistry;
-use super::properties::BlockPropertyRegistry;
 use super::*;
 
 #[derive(Event)]

@@ -5,6 +5,7 @@ pub mod INIT_BLOCKS;
 mod block_defs;
 mod block_descriptor;
 pub mod blockreg;
+pub mod dynamic_property;
 pub mod existence_conditions;
 pub mod properties;
 mod xsprite_mesh;

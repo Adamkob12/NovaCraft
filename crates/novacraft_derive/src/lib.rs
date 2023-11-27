@@ -7,8 +7,8 @@ use syn::{self, DeriveInput};
 pub fn init_blocks_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast = syn::parse(input).unwrap();
 
-    let (blocks_enum, into_str, impl_debug) = blocks_enum(&ast);
-    let default_registries = def_registries(&ast);
+    let (blocks_enum, into_str, impl_debug, enum_name) = blocks_enum(&ast);
+    let default_registries = def_registries(&ast, enum_name);
 
     let a = quote! {
         // pub mod auto_generated {
@@ -22,7 +22,7 @@ pub fn init_blocks_derive(input: proc_macro::TokenStream) -> proc_macro::TokenSt
     a.into()
 }
 
-fn blocks_enum(input: &DeriveInput) -> (TokenStream, TokenStream, TokenStream) {
+fn blocks_enum(input: &DeriveInput) -> (TokenStream, TokenStream, TokenStream, syn::Ident) {
     let syn::Data::Enum(syn::DataEnum { variants, .. }) = &input.data else {
         panic!("Init Blocks macro is only available to enums");
     };
@@ -36,8 +36,7 @@ fn blocks_enum(input: &DeriveInput) -> (TokenStream, TokenStream, TokenStream) {
     let id_vals = 0u16..(vidents.len() as u16);
     let enum_name: syn::Ident = syn::Ident::new_raw("Block", vidents.clone().last().__span());
 
-    let blocks_enum = quote! {
-        #[repr(u16)]
+    let blocks_enum = quote! { #[repr(u16)]
         #[derive(Eq, PartialEq, Clone, Copy, bevy::prelude::Component)]
         pub enum #enum_name {
             #(#capitalized_vidents = #id_vals),*
@@ -62,10 +61,15 @@ fn blocks_enum(input: &DeriveInput) -> (TokenStream, TokenStream, TokenStream) {
         }
     };
 
-    (blocks_enum.into(), impl_into_str.into(), impl_debug.into())
+    (
+        blocks_enum.into(),
+        impl_into_str.into(),
+        impl_debug.into(),
+        enum_name,
+    )
 }
 
-fn def_registries(input: &DeriveInput) -> TokenStream {
+fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
     let syn::Data::Enum(syn::DataEnum { variants, .. }) = &input.data else {
         panic!("Init Blocks macro is only available to enums");
     };
@@ -74,6 +78,11 @@ fn def_registries(input: &DeriveInput) -> TokenStream {
         .iter()
         .map(|ident| syn::Ident::new(format!("{}", ident).to_lowercase().as_str(), ident.span()))
         .collect();
+    let capitalized_vidents: Vec<syn::Ident> = vidents
+        .iter()
+        .map(|ident| syn::Ident::new(format!("{}", ident).to_uppercase().as_str(), ident.span()))
+        .collect();
+
     let fields: Vec<&syn::Field> = variants
         .iter()
         .map(|var| {
@@ -94,6 +103,10 @@ fn def_registries(input: &DeriveInput) -> TokenStream {
         .collect();
 
     let impl_default = quote! {
+        #[derive(bevy::prelude::Resource)]
+        pub struct BlockPropertyRegistry<P: Property> {
+            #(pub #lowercase_vidents: PropertyCollection<P>),*
+        }
         impl Default for BlockPropertyRegistry<PhysicalProperty> {
             fn default() -> Self {
                 Self {
@@ -112,6 +125,20 @@ fn def_registries(input: &DeriveInput) -> TokenStream {
             fn default() -> Self {
                 Self {
                     #(#lowercase_vidents: #fpaths::#vidents().perceptible_properties),*
+                }
+            }
+        }
+
+        impl<P: Property + PartialEq> BlockPropertyRegistry<P> {
+            pub fn iter_properties(&self, block: &#enum_name) -> &[P] {
+                match block {
+                    #(#enum_name::#capitalized_vidents => self.#lowercase_vidents.0.as_slice()),*
+                }
+            }
+
+            pub fn contains_property(&self, block: &#enum_name, property: &P) -> bool {
+                match block {
+                    #(#enum_name::#capitalized_vidents => self.#lowercase_vidents.contains(property)),*
                 }
             }
         }
