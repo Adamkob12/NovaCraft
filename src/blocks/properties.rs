@@ -1,7 +1,21 @@
-use super::*;
+use novacraft_derive::InitBlockProperties;
+
+use super::{dynamic_property::BlockTransformation, *};
 const BLOCK_DENSITY: f32 = 100.0;
 
-pub trait Property {}
+pub trait BlockProperty {
+    fn get_property_type() -> BlockPropertyTypes;
+}
+
+#[allow(non_camel_case_types)]
+#[derive(InitBlockProperties)]
+pub enum BlockPropertyTypes {
+    Physical(Option<PhysicalProperty>),
+    PassiveProperty(Option<PassiveProperty>),
+    Perceptible(Option<PerceptibleProperty>),
+    Dynamic(Option<DynamicProperty>),
+    ExCond(Option<ExistenceCondition>),
+}
 
 #[derive(Component)]
 pub struct FallingBlock;
@@ -23,9 +37,9 @@ pub enum PerceptibleProperty {
     AudioSource,
 }
 
-impl Property for PerceptibleProperty {}
-impl Property for PassiveProperty {}
-impl Property for PhysicalProperty {}
+pub enum DynamicProperty {
+    BlockAbove(BlockTransformation),
+}
 
 impl BlockPropertyRegistry<PhysicalProperty> {
     pub fn get_density(&self, block: &Block) -> f32 {
@@ -38,11 +52,8 @@ impl BlockPropertyRegistry<PhysicalProperty> {
     pub fn is_collidable(block: &Block) -> bool {
         match block {
             Block::AIR => false,
-            Block::DIRT => true,
-            Block::GRASS => true,
-            Block::STONE => true,
             Block::GREENERY => false,
-            Block::SAND => true,
+            _ => true,
         }
     }
 }

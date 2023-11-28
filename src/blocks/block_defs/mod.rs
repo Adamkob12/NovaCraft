@@ -1,16 +1,16 @@
 #![allow(dead_code)]
 use super::{
     block_descriptor::*,
-    existence_conditions::{BlockCondition, CommonBlockCondition, ConditionalExistence},
-    properties::{PassiveProperty, PhysicalProperty},
-    Face,
+    existence_conditions::{BlockCondition, CommonBlockCondition, ExistenceCondition},
+    properties::{DynamicProperty, PassiveProperty, PhysicalProperty},
+    Block, Face,
 };
 
 #[allow(non_snake_case)]
 impl BlockDescriptor {
     pub fn Air() -> Self {
         Self {
-            passive_properties: PropertyCollection::<PassiveProperty>::from_property(
+            PassivePropertys: PropertyCollection::<PassiveProperty>::from_property(
                 PassiveProperty::YieldToFallingBlock,
             ),
             ..Default::default()
@@ -23,6 +23,14 @@ impl BlockDescriptor {
                 CubeTextureCords::uniform([1, 0])
                     .with_face(Face::Top, [0, 0])
                     .with_face(Face::Bottom, [2, 0]),
+            ),
+            DynamicPropertys: PropertyCollection::<DynamicProperty>::from_property(
+                DynamicProperty::BlockAbove(Box::new({
+                    |block| match block {
+                        Block::AIR | Block::GREENERY => Block::GRASS,
+                        _ => Block::DIRT,
+                    }
+                })),
             ),
             ..Default::default()
         }
@@ -45,11 +53,8 @@ impl BlockDescriptor {
     pub fn Greenery() -> Self {
         BlockDescriptor {
             mesh_gen_data: MeshGenData::XSprite(XSpriteTextureCords::uniform([4, 0])),
-            existence_conditions: ConditionalExistence::BlockUnderMust(BlockCondition::id_equals(
-                1,
-            )),
-            passive_properties: PropertyCollection::<PassiveProperty>::from_property(
-                PassiveProperty::YieldToFallingBlock,
+            ExistenceConditions: PropertyCollection::<ExistenceCondition>::from_property(
+                ExistenceCondition::BlockUnderMust(BlockCondition::equals(Block::GRASS)),
             ),
             ..Default::default()
         }
@@ -58,7 +63,7 @@ impl BlockDescriptor {
     pub fn Sand() -> Self {
         BlockDescriptor {
             mesh_gen_data: MeshGenData::Cube(CubeTextureCords::uniform([6, 0])),
-            physical_properties: PropertyCollection::<PhysicalProperty>::from_property(
+            PhysicalPropertys: PropertyCollection::<PhysicalProperty>::from_property(
                 PhysicalProperty::AffectedByGravity,
             ),
             ..Default::default()

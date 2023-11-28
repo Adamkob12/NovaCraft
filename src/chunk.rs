@@ -161,7 +161,8 @@ impl Plugin for ChunkPlugin {
                 dequeue_all_chunks.run_if(resource_changed::<ChunkQueue>()),
                 handle_chunk_spawn_tasks,
                 ((update_cube_chunks, update_xsprite_chunks), apply_deferred,
-                (apply_smooth_lighting_after_update, apply_smooth_lighting_edgecases)).chain()
+                (apply_smooth_lighting_after_update, apply_smooth_lighting_edgecases)).chain(),
+                // follow_falling_block,
             ),
         )
         .add_systems(PostUpdate, (update_close_chunks, insert_collider_for_close_chunks))

@@ -1,4 +1,5 @@
-use crate::action::BreakBlockGlobalEvent;
+use crate::action::properties::DynamicProperty;
+use crate::action::{BreakBlockGlobalEvent, PlaceBlockGlobalEvent};
 use crate::blocks::{
     blockreg::BlockRegistry,
     existence_conditions::*,
@@ -11,11 +12,13 @@ use super::*;
 pub(super) fn handle_block_updates(
     mut world_block_update_events: EventReader<WorldBlockUpdate>,
     mut break_block_global_sender: EventWriter<BreakBlockGlobalEvent>,
+    mut place_block_global_sender: EventWriter<PlaceBlockGlobalEvent>,
     mut commands: Commands,
     chunk_map: Res<ChunkMap>,
-    exconds: Res<ExistenceConditions>,
+    exconds: Res<BlockPropertyRegistry<ExistenceCondition>>,
     passive_preg: Res<BlockPropertyRegistry<PassiveProperty>>,
     physical_preg: Res<BlockPropertyRegistry<PhysicalProperty>>,
+    dyn_preg: Res<BlockPropertyRegistry<DynamicProperty>>,
     breg: Res<BlockRegistry>,
     grids: Query<(&Grid, &MainChild, &XSpriteChild), With<Chunk>>,
     main_mat: Res<BlockMaterial>,
@@ -23,6 +26,8 @@ pub(super) fn handle_block_updates(
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     for wbu in world_block_update_events.read() {
+        let mut break_block = false;
+        let mut replace_with = None;
         let WorldBlockUpdate {
             chunk_pos,
             block_index,
@@ -40,16 +45,15 @@ pub(super) fn handle_block_updates(
         };
         let block_below = get_neighbor(*block_index, Bottom, CHUNK_DIMS)
             .map_or(Block::AIR, |i| grid.read().unwrap()[i]);
-        for property in physical_preg.iter_properties(&block) {
-            match property {
+        let block_above = get_neighbor(*block_index, Top, CHUNK_DIMS)
+            .map_or(Block::AIR, |i| grid.read().unwrap()[i]);
+        for physical_property in physical_preg.get_properties(&block) {
+            match physical_property {
                 PhysicalProperty::AffectedByGravity => {
                     if passive_preg
                         .contains_property(&block_below, &PassiveProperty::YieldToFallingBlock)
                     {
-                        break_block_global_sender.send(
-                            BreakBlockGlobalEvent::new(*block_index)
-                                .with_chunk_entity(*block_entity),
-                        );
+                        break_block = true;
                         spawn_falling_block(
                             &mut commands,
                             meshes.add(block_mesh.clone()),
@@ -63,23 +67,42 @@ pub(super) fn handle_block_updates(
                 }
             }
         }
-        let mut break_block = false;
-        match exconds.get_condition(&block) {
-            // The block always exists
-            ConditionalExistence::Always => {}
-            // If the block can never exist, we break it.
-            ConditionalExistence::Never => break_block = true,
-            ConditionalExistence::BlockUnderMust(cond) => {
-                if !cond(block_below) {
-                    break_block = true
+
+        for dynamic_property in dyn_preg.get_properties(&block) {
+            match dynamic_property {
+                DynamicProperty::BlockAbove(trans) => {
+                    let tmp = trans(block_above);
+                    if tmp != block {
+                        replace_with = Some(tmp);
+                    }
                 }
             }
-            // TODO: support chained conditions (ie: ConditionalExistence::AND / OR)
-            _ => {}
+        }
+
+        for condition in exconds.get_properties(&block) {
+            match condition {
+                // The block always exists
+                ExistenceCondition::Always => {}
+                // If the block can never exist, we break it.
+                ExistenceCondition::Never => break_block = true,
+                ExistenceCondition::BlockUnderMust(cond) => {
+                    if !cond(block_below) {
+                        break_block = true
+                    }
+                }
+                // TODO: support chained conditions (ie: ConditionalExistence::AND / OR)
+                _ => {}
+            }
         }
         if break_block {
             break_block_global_sender
                 .send(BreakBlockGlobalEvent::new(*block_index).with_chunk_entity(*block_entity))
+        } else if let Some(alt) = replace_with {
+            place_block_global_sender.send(PlaceBlockGlobalEvent {
+                block: alt,
+                chunk_pos: *chunk_pos,
+                block_index: *block_index,
+            })
         }
     }
 }

@@ -12,7 +12,8 @@ mod xsprite_mesh;
 
 pub use INIT_BLOCKS::*;
 
-use self::{blockreg::BlockRegistry, existence_conditions::ExistenceConditions, properties::*};
+use self::{blockreg::BlockRegistry, properties::*};
+use existence_conditions::ExistenceCondition;
 
 pub type BlockId = u16;
 
@@ -45,6 +46,7 @@ impl Plugin for BlocksPlugin {
             .init_resource::<BlockPropertyRegistry<PassiveProperty>>()
             .init_resource::<BlockPropertyRegistry<PhysicalProperty>>()
             .init_resource::<BlockPropertyRegistry<PerceptibleProperty>>()
-            .init_resource::<ExistenceConditions>();
+            .init_resource::<BlockPropertyRegistry<DynamicProperty>>()
+            .init_resource::<BlockPropertyRegistry<ExistenceCondition>>();
     }
 }
