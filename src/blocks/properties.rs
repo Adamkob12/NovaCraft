@@ -3,18 +3,16 @@ use novacraft_derive::InitBlockProperties;
 use super::{dynamic_property::BlockTransformation, *};
 const BLOCK_DENSITY: f32 = 100.0;
 
-pub trait BlockProperty {
-    fn get_property_type() -> BlockPropertyTypes;
-}
+pub trait BlockProperty {}
 
 #[allow(non_camel_case_types)]
 #[derive(InitBlockProperties)]
-pub enum BlockPropertyTypes {
-    Physical(Option<PhysicalProperty>),
-    PassiveProperty(Option<PassiveProperty>),
-    Perceptible(Option<PerceptibleProperty>),
-    Dynamic(Option<DynamicProperty>),
-    ExCond(Option<ExistenceCondition>),
+pub enum PROPERTY_INITIALIZER {
+    Physical(PhysicalProperty),
+    PassiveProperty(PassiveProperty),
+    Perceptible(PerceptibleProperty),
+    Dynamic(DynamicProperty),
+    ExCond(ExistenceCondition),
 }
 
 #[derive(Component)]

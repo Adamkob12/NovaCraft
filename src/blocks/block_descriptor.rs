@@ -5,8 +5,7 @@ use novacraft_meshing_backend::prelude::Face;
 use super::{
     existence_conditions::ExistenceCondition,
     properties::{
-        BlockProperty, BlockPropertyTypes, DynamicProperty, PassiveProperty, PerceptibleProperty,
-        PhysicalProperty,
+        BlockProperty, DynamicProperty, PassiveProperty, PerceptibleProperty, PhysicalProperty,
     },
 };
 
@@ -40,18 +39,14 @@ impl<T: BlockProperty> std::ops::Deref for PropertyCollection<T> {
     }
 }
 
-#[allow(non_camel_case_types)]
-pub struct INIT_BLOCK_DESCRIPTOR;
-
-#[allow(non_snake_case)]
 #[derive(Default)]
 pub struct BlockDescriptor {
     pub mesh_gen_data: MeshGenData,
-    pub ExistenceConditions: PropertyCollection<ExistenceCondition>,
-    pub PhysicalPropertys: PropertyCollection<PhysicalProperty>,
-    pub PassivePropertys: PropertyCollection<PassiveProperty>,
-    pub PerceptiblePropertys: PropertyCollection<PerceptibleProperty>,
-    pub DynamicPropertys: PropertyCollection<DynamicProperty>,
+    pub exconds: PropertyCollection<ExistenceCondition>,
+    pub physical: PropertyCollection<PhysicalProperty>,
+    pub passive: PropertyCollection<PassiveProperty>,
+    pub perceptible: PropertyCollection<PerceptibleProperty>,
+    pub dynamic: PropertyCollection<DynamicProperty>,
 }
 
 #[derive(Default)]

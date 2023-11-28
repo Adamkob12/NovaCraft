@@ -10,7 +10,7 @@ use super::{
 impl BlockDescriptor {
     pub fn Air() -> Self {
         Self {
-            PassivePropertys: PropertyCollection::<PassiveProperty>::from_property(
+            passive: PropertyCollection::<PassiveProperty>::from_property(
                 PassiveProperty::YieldToFallingBlock,
             ),
             ..Default::default()
@@ -24,7 +24,7 @@ impl BlockDescriptor {
                     .with_face(Face::Top, [0, 0])
                     .with_face(Face::Bottom, [2, 0]),
             ),
-            DynamicPropertys: PropertyCollection::<DynamicProperty>::from_property(
+            dynamic: PropertyCollection::<DynamicProperty>::from_property(
                 DynamicProperty::BlockAbove(Box::new({
                     |block| match block {
                         Block::AIR | Block::GREENERY => Block::GRASS,
@@ -53,7 +53,10 @@ impl BlockDescriptor {
     pub fn Greenery() -> Self {
         BlockDescriptor {
             mesh_gen_data: MeshGenData::XSprite(XSpriteTextureCords::uniform([4, 0])),
-            ExistenceConditions: PropertyCollection::<ExistenceCondition>::from_property(
+            passive: PropertyCollection::<PassiveProperty>::from_property(
+                PassiveProperty::YieldToFallingBlock,
+            ),
+            exconds: PropertyCollection::<ExistenceCondition>::from_property(
                 ExistenceCondition::BlockUnderMust(BlockCondition::equals(Block::GRASS)),
             ),
             ..Default::default()
@@ -63,7 +66,7 @@ impl BlockDescriptor {
     pub fn Sand() -> Self {
         BlockDescriptor {
             mesh_gen_data: MeshGenData::Cube(CubeTextureCords::uniform([6, 0])),
-            PhysicalPropertys: PropertyCollection::<PhysicalProperty>::from_property(
+            physical: PropertyCollection::<PhysicalProperty>::from_property(
                 PhysicalProperty::AffectedByGravity,
             ),
             ..Default::default()

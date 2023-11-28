@@ -9,7 +9,6 @@ pub fn init_block_properties(input: proc_macro::TokenStream) -> proc_macro::Toke
     let syn::Data::Enum(syn::DataEnum { variants, .. }) = &ast.data else {
         panic!("Init Blocks macro is only available to enums");
     };
-    let vidents: Vec<syn::Ident> = variants.iter().map(|var| var.ident.clone()).collect();
     let fields: Vec<&syn::Field> = variants
         .iter()
         .map(|var| {
@@ -28,34 +27,31 @@ pub fn init_block_properties(input: proc_macro::TokenStream) -> proc_macro::Toke
             path.path.clone()
         })
         .collect();
-    let props: Vec<syn::Path> = fpaths
-        .iter()
-        .map(|p| {
-            let syn::Path { segments, .. } = p;
-            let seg = segments.first().unwrap();
-            let syn::PathSegment {
-                arguments:
-                    syn::PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments {
-                        args, ..
-                    }),
-                ..
-            } = seg
-            else {
-                panic!()
-            };
-            let syn::GenericArgument::Type(syn::Type::Path(path)) = args.first().unwrap() else {
-                panic!()
-            };
-            path.path.clone()
-        })
-        .collect();
+    // let props: Vec<syn::Path> = fpaths
+    //     .iter()
+    //     .map(|p| {
+    //         let syn::Path { segments, .. } = p;
+    //         let seg = segments.first().unwrap();
+    //         let syn::PathSegment {
+    //             arguments:
+    //                 syn::PathArguments::AngleBracketed(syn::AngleBracketedGenericArguments {
+    //                     args, ..
+    //                 }),
+    //             ..
+    //         } = seg
+    //         else {
+    //             panic!()
+    //         };
+    //         let syn::GenericArgument::Type(syn::Type::Path(path)) = args.first().unwrap() else {
+    //             panic!()
+    //         };
+    //         path.path.clone()
+    //     })
+    //     .collect();
 
     {
         quote! {
-            #(impl BlockProperty for #props {
-                fn get_property_type() -> BlockPropertyTypes {
-                     BlockPropertyTypes::#vidents(None)
-                }
+            #(impl BlockProperty for #fpaths {
             })*
         }
     }
@@ -145,23 +141,28 @@ fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
     let fields: Vec<&syn::Field> = variants
         .iter()
         .map(|var| {
-            let syn::Fields::Unnamed(ref f) = var.fields else {
-                panic!("a")
-            };
-            f.unnamed.first().expect("aa")
+            if let syn::Fields::Unnamed(ref f) = var.fields {
+                f.unnamed.first().expect("aa")
+            } else if let syn::Fields::Named(ref f) = var.fields {
+                f.named.first().expect("ab")
+            } else {
+                panic!()
+            }
         })
         .collect();
     let props: Vec<Vec<syn::Field>> = variants
         .iter()
-        .map(|var| {
-            let syn::Fields::Unnamed(ref f) = var.fields else {
-                panic!("a")
-            };
-            f.unnamed.clone().iter().skip(1).cloned().collect()
+        .filter_map(|var| {
+            if let syn::Fields::Named(ref f) = var.fields {
+                Some(f.named.clone().iter().skip(1).cloned().collect())
+            } else {
+                None
+            }
         })
         .collect();
     let props = props.first().unwrap();
-    let props: Vec<syn::Path> = props
+    let props_idents: Vec<syn::Ident> = props.iter().map(|f| f.ident.clone().unwrap()).collect();
+    let props_path: Vec<syn::Path> = props
         .iter()
         .map(|f| {
             let syn::Type::Path(ref path) = f.ty else {
@@ -180,6 +181,21 @@ fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
         })
         .collect();
 
+    let mut def_impls = vec![];
+    for i in 0..props_path.len() {
+        let path = props_path[i].clone();
+        let ident = props_idents[i].clone();
+        def_impls.push(quote! {
+            impl Default for BlockPropertyRegistry<#path> {
+                fn default() -> Self {
+                    Self {
+                        #(#lowercase_vidents: #fpaths::#vidents().#ident),*
+                    }
+                }
+            }
+        })
+    }
+
     let impl_default = quote! {
         use crate::blocks::existence_conditions::*;
         use crate::blocks::properties::*;
@@ -188,49 +204,9 @@ fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
             #(pub #lowercase_vidents: PropertyCollection<P>),*
         }
 
-        // #(impl Default for BlockPropertyRegistry<#props> {
-        //     fn default() -> Self {
-        //         Self {
-        //             #(#lowercase_vidents: #fpaths::#vidents())::#props,*
-        //         }
-        //     }
-        // });*
-
-        impl Default for BlockPropertyRegistry<PhysicalProperty> {
-            fn default() -> Self {
-                Self {
-                    #(#lowercase_vidents: #fpaths::#vidents().PhysicalPropertys),*
-                }
-            }
-        }
-        impl Default for BlockPropertyRegistry<PassiveProperty> {
-            fn default() -> Self {
-                Self {
-                    #(#lowercase_vidents: #fpaths::#vidents().PassivePropertys),*
-                }
-            }
-        }
-        impl Default for BlockPropertyRegistry<PerceptibleProperty> {
-            fn default() -> Self {
-                Self {
-                    #(#lowercase_vidents: #fpaths::#vidents().PerceptiblePropertys),*
-                }
-            }
-        }
-        impl Default for BlockPropertyRegistry<ExistenceCondition> {
-            fn default() -> Self {
-                Self {
-                    #(#lowercase_vidents: #fpaths::#vidents().ExistenceConditions),*
-                }
-            }
-        }
-        impl Default for BlockPropertyRegistry<DynamicProperty> {
-            fn default() -> Self {
-                Self {
-                    #(#lowercase_vidents: #fpaths::#vidents().DynamicPropertys),*
-                }
-            }
-        }
+        #(
+        #def_impls
+        )*
 
 
         impl<P: BlockProperty> BlockPropertyRegistry<P> {
