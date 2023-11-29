@@ -3,10 +3,10 @@ pub mod prelude {
     pub use crate::helper_ecs_utils::*;
     pub use bevy::prelude::*;
     pub use bevy::render::mesh::*;
-    pub use bevy_meshem::prelude::*;
+    pub use novacraft_meshing_backend::prelude::*;
     // Notical direction
     pub mod notical {
-        pub use bevy_meshem::prelude::direction::*;
+        pub use novacraft_meshing_backend::prelude::direction::*;
     }
 }
 
