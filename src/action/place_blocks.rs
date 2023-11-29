@@ -9,6 +9,8 @@ use crate::prelude::notical;
 use crate::utils::to_global_pos;
 
 use super::blockreg::BlockRegistry;
+use super::existence_conditions::ExistenceConditionSolverData;
+use super::properties::DynamicProperty;
 use super::*;
 
 #[derive(Event)]
@@ -25,15 +27,15 @@ pub(super) fn handle_place_block_event(
     mut place_block_event_reader: EventReader<BlockPlaceEvent>,
     mut global_block_place_event_sender: EventWriter<PlaceBlockGlobalEvent>,
     child_chunk_query: Query<&Parent, With<ChunkChild>>,
-    parent_chunk_query: Query<&Cords>,
+    dyn_preg: Res<BlockPropertyRegistry<DynamicProperty>>,
+    parent_chunk_query: Query<(&Cords, &Grid)>,
     player_q: Query<(&Transform, &Collider), With<PhysicalPlayer>>,
     blocks_q: Query<(&Block, &Collider, &Transform)>,
 ) {
-    'event_loop: for BlockPlaceEvent(entity, index, face, block_to_place) in
-        place_block_event_reader.read()
-    {
+    'event_loop: for place_block_event in place_block_event_reader.read() {
+        let BlockPlaceEvent(entity, index, face, block_to_place) = place_block_event;
         if let Ok(parent) = child_chunk_query.get(*entity) {
-            if let Ok(Cords(cords)) = parent_chunk_query.get(parent.get()) {
+            if let Ok((Cords(cords), Grid(grid))) = parent_chunk_query.get(parent.get()) {
                 let (block_index, chunk_pos) = {
                     if let Some(neighbor) = get_neighbor(*index, *face, CHUNK_DIMS) {
                         (neighbor, *cords)
@@ -87,6 +89,27 @@ pub(super) fn handle_place_block_event(
                             info!("Attempt to place block that overlaps with another block was stopped.");
                             continue 'event_loop;
                         }
+                    }
+                }
+
+                // Check if the to-be placed block can even exist in the given place
+                let mut surrounding_blocks = [None; 6];
+                (0..6).into_iter().for_each(|j| {
+                    surrounding_blocks[j] = Some(
+                        get_neighbor(block_index, Face::from(j), CHUNK_DIMS)
+                            .map_or(Block::AIR, |i| grid.read().unwrap()[i]),
+                    )
+                });
+                let solver_data = ExistenceConditionSolverData { surrounding_blocks };
+                for dynamic_property in dyn_preg.get_properties(block_to_place) {
+                    match dynamic_property {
+                        DynamicProperty::ExistenceCondition(cond) => {
+                            if !cond.solve(solver_data) {
+                                info!("Attemp to place block that can't exist there was stopped");
+                                continue 'event_loop;
+                            }
+                        }
+                        _ => {}
                     }
                 }
 
