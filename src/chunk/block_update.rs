@@ -9,13 +9,25 @@ use crate::blocks::{
 
 use super::*;
 
-pub(super) fn handle_block_updates(
+#[derive(Resource, Default, PartialEq)]
+pub struct ChunkUpdateLock(bool);
+
+#[rustfmt::skip]
+impl ChunkUpdateLock {
+    pub fn lock(&mut self) { self.0 = false; }
+    pub fn unlock(&mut self) { self.0 = true; }
+    pub fn _locked() -> Self { Self(false) }
+    pub fn unlocked() -> Self { Self(true) }
+    pub fn is_locked(&self) -> bool { !self.0 }
+    pub fn is_unlocked(&self) -> bool { self.0 }
+}
+
+pub fn handle_block_updates(
     mut world_block_update_events: EventReader<WorldBlockUpdate>,
     mut break_block_global_sender: EventWriter<BreakBlockGlobalEvent>,
     mut place_block_global_sender: EventWriter<PlaceBlockGlobalEvent>,
     mut commands: Commands,
     chunk_map: Res<ChunkMap>,
-    exconds: Res<BlockPropertyRegistry<ExistenceCondition>>,
     passive_preg: Res<BlockPropertyRegistry<PassiveProperty>>,
     physical_preg: Res<BlockPropertyRegistry<PhysicalProperty>>,
     dyn_preg: Res<BlockPropertyRegistry<DynamicProperty>>,
@@ -24,7 +36,14 @@ pub(super) fn handle_block_updates(
     main_mat: Res<BlockMaterial>,
     xsprite_mat: Res<XSpriteMaterial>,
     mut meshes: ResMut<Assets<Mesh>>,
+    mut update_lock: ResMut<ChunkUpdateLock>,
 ) {
+    if world_block_update_events.is_empty() {
+        update_lock.unlock();
+    } else if update_lock.is_unlocked() {
+        update_lock.lock();
+    }
+
     for wbu in world_block_update_events.read() {
         let mut break_block = false;
         let mut replace_with = None;
@@ -76,24 +95,23 @@ pub(super) fn handle_block_updates(
                         replace_with = Some(tmp);
                     }
                 }
+                DynamicProperty::ExistenceCondition(cond) => {
+                    match cond {
+                        // The block always exists
+                        ExistenceCondition::Always => {}
+                        // If the block can never exist, we break it.
+                        ExistenceCondition::Never => break_block = true,
+                        ExistenceCondition::BlockUnderMust(cond) => {
+                            if !cond(block_below) {
+                                break_block = true
+                            }
+                        }
+                        _ => {}
+                    }
+                }
             }
         }
 
-        for condition in exconds.get_properties(&block) {
-            match condition {
-                // The block always exists
-                ExistenceCondition::Always => {}
-                // If the block can never exist, we break it.
-                ExistenceCondition::Never => break_block = true,
-                ExistenceCondition::BlockUnderMust(cond) => {
-                    if !cond(block_below) {
-                        break_block = true
-                    }
-                }
-                // TODO: support chained conditions (ie: ConditionalExistence::AND / OR)
-                _ => {}
-            }
-        }
         if break_block {
             break_block_global_sender
                 .send(BreakBlockGlobalEvent::new(*block_index).with_chunk_entity(*block_entity))

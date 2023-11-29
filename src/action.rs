@@ -1,5 +1,7 @@
 pub use crate::blocks::*;
-use crate::chunk::{follow_falling_block, ChunkCords, CHUNK_DIMS};
+use crate::chunk::{
+    block_update::handle_block_updates, follow_falling_block, ChunkCords, CHUNK_DIMS,
+};
 use crate::inventory::Inventory;
 pub use crate::player::*;
 pub use crate::prelude::*;
@@ -31,6 +33,7 @@ impl Plugin for ActionPlugin {
                     follow_falling_block,
                     (handle_place_block_event, global_block_breaker),
                     global_block_placer,
+                    handle_block_updates,
                     apply_deferred,
                 )
                     .run_if(any_with_component::<PlayerCamera>())

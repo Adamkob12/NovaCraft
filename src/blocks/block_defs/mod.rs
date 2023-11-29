@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 use super::{
     block_descriptor::*,
-    existence_conditions::{BlockCondition, CommonBlockCondition, ExistenceCondition},
+    existence_conditions::ExistenceCondition,
     properties::{DynamicProperty, PassiveProperty, PhysicalProperty},
     Block, Face,
 };
@@ -56,8 +56,10 @@ impl BlockDescriptor {
             passive: PropertyCollection::<PassiveProperty>::from_property(
                 PassiveProperty::YieldToFallingBlock,
             ),
-            exconds: PropertyCollection::<ExistenceCondition>::from_property(
-                ExistenceCondition::BlockUnderMust(BlockCondition::equals(Block::GRASS)),
+            dynamic: PropertyCollection::<DynamicProperty>::from_property(
+                DynamicProperty::ExistenceCondition(ExistenceCondition::BlockUnderMust(Box::new(
+                    |block| block == Block::GRASS,
+                ))),
             ),
             ..Default::default()
         }

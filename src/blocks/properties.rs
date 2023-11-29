@@ -12,7 +12,6 @@ pub enum PROPERTY_INITIALIZER {
     PassiveProperty(PassiveProperty),
     Perceptible(PerceptibleProperty),
     Dynamic(DynamicProperty),
-    ExCond(ExistenceCondition),
 }
 
 #[derive(Component)]
@@ -37,6 +36,7 @@ pub enum PerceptibleProperty {
 
 pub enum DynamicProperty {
     BlockAbove(BlockTransformation),
+    ExistenceCondition(ExistenceCondition),
 }
 
 impl BlockPropertyRegistry<PhysicalProperty> {

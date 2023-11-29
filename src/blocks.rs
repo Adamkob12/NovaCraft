@@ -46,7 +46,6 @@ impl Plugin for BlocksPlugin {
             .init_resource::<BlockPropertyRegistry<PassiveProperty>>()
             .init_resource::<BlockPropertyRegistry<PhysicalProperty>>()
             .init_resource::<BlockPropertyRegistry<PerceptibleProperty>>()
-            .init_resource::<BlockPropertyRegistry<DynamicProperty>>()
-            .init_resource::<BlockPropertyRegistry<ExistenceCondition>>();
+            .init_resource::<BlockPropertyRegistry<DynamicProperty>>();
     }
 }

@@ -1,6 +1,5 @@
 use super::block_descriptor::*;
 use super::properties::*;
-use super::ExistenceCondition;
 use novacraft_derive::InitBlocks;
 
 #[allow(non_snake_case, non_camel_case_types)]
@@ -12,7 +11,6 @@ pub enum BLOCKS_INITIALIZER {
         passive: PassiveProperty,
         perceptible: PerceptibleProperty,
         dynamic: DynamicProperty,
-        exconds: ExistenceCondition,
     },
     Dirt(BlockDescriptor),
     Grass(BlockDescriptor),

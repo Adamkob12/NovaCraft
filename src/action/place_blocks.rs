@@ -69,9 +69,8 @@ pub(super) fn handle_place_block_event(
                 }
 
                 // check if the to-be placed block overlaps with any current out-of-chunk blocks
-                for (block, collider, transform) in blocks_q.iter() {
+                for (_block, collider, transform) in blocks_q.iter() {
                     // In the future, this might be a condition about the block itself.
-                    dbg!(block);
                     if true {
                         if contact(
                             collider,
@@ -102,7 +101,7 @@ pub(super) fn handle_place_block_event(
     }
 }
 
-pub(super) fn global_block_placer(
+pub fn global_block_placer(
     mut global_block_place_events: EventReader<PlaceBlockGlobalEvent>,
     mut world_block_update_sender: EventWriter<WorldBlockUpdate>,
     mut break_block_global_sender: EventWriter<BreakBlockGlobalEvent>,

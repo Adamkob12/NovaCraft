@@ -45,7 +45,7 @@ impl BreakBlockGlobalEvent {
     }
 }
 
-pub(super) fn global_block_breaker(
+pub fn global_block_breaker(
     mut global_block_break_events: EventReader<BreakBlockGlobalEvent>,
     mut world_block_update_sender: EventWriter<WorldBlockUpdate>,
     mut commands: Commands,

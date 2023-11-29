@@ -1,4 +1,4 @@
-mod block_update;
+pub mod block_update;
 mod chunk_queue;
 pub mod chunkmd;
 mod falling_block;
@@ -147,7 +147,8 @@ impl Plugin for ChunkPlugin {
                     (RENDER_DISTANCE * RENDER_DISTANCE) as usize,
                 ),
             })
-            .init_resource::<ChunkQueue>();
+            .init_resource::<ChunkQueue>()
+            .init_resource::<ChunkUpdateLock>();
         app.add_systems(
             PreUpdate,
             (reload_all.run_if(
@@ -161,14 +162,14 @@ impl Plugin for ChunkPlugin {
                 dequeue_all_chunks.run_if(resource_changed::<ChunkQueue>()),
                 handle_chunk_spawn_tasks,
                 ((update_cube_chunks, update_xsprite_chunks), apply_deferred,
-                (apply_smooth_lighting_after_update, apply_smooth_lighting_edgecases)).chain(),
-                // follow_falling_block,
+                (apply_smooth_lighting_after_update, apply_smooth_lighting_edgecases))
+                    .chain().run_if(resource_equals(ChunkUpdateLock::unlocked())),
             ),
         )
         .add_systems(PostUpdate, (update_close_chunks, insert_collider_for_close_chunks))
         .add_systems(
             PostUpdate,
-            ((connect_chunks, introduce_neighboring_chunks, apply_smooth_lighting_after_introduce, handle_block_updates).run_if(
+            ((connect_chunks, introduce_neighboring_chunks, apply_smooth_lighting_after_introduce).run_if(
                 not(any_with_component::<ComputeChunk>())/* .and_then(resource_changed::<OneIn2>()) */,
             ),),
         )
