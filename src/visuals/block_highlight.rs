@@ -1,8 +1,7 @@
-use std::f32::consts::PI;
-
-use crate::mesh_utils::{CHUNK_DIMS, LENGTH, WIDTH};
-
 use super::*;
+use crate::chunk::*;
+use crate::prelude::*;
+use std::f32::consts::PI;
 
 const HIGHLIGHT_SCALE: f32 = 1.005;
 

@@ -1,4 +1,4 @@
-use crate::mesh_utils::{
+use crate::chunk::{
     ChunkCords, ChunkMap, ToApplySL, CHUNK_DIMS, CHUNK_TOTAL_BLOCKS, LENGTH, WIDTH,
 };
 use crate::prelude::notical;

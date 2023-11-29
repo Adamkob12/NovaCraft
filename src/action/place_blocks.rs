@@ -2,9 +2,8 @@ use bevy_xpbd_3d::prelude::contact_query::contact;
 use bevy_xpbd_3d::prelude::Collider;
 
 use crate::blocks::BlockPropertyRegistry;
-use crate::chunk::{Chunk, ChunkCords, ChunkMap, Cords, Grid, ToUpdate, CHUNK_DIMS};
-use crate::mesh_utils::chunkmd::CMMD;
-use crate::mesh_utils::{ChunkChild, CubeChunk, XSpriteChunk};
+use crate::chunk::{chunkmd::CMMD, Chunk, ChunkCords, ChunkMap, Cords, Grid, ToUpdate, CHUNK_DIMS};
+use crate::chunk::{ChunkChild, CubeChunk, XSpriteChunk};
 use crate::prelude::notical;
 use crate::utils::to_global_pos;
 
@@ -177,7 +176,7 @@ pub fn global_block_placer(
                     // make sure we update the metadata of the right chunk
                     match breg.get_mesh(block) {
                         VoxelMesh::NormalCube(_) if xsprite_chunk => continue,
-                        VoxelMesh::CustomMesh(_) if cube_chunk => continue,
+                        VoxelMesh::XSprite(_) if cube_chunk => continue,
                         VoxelMesh::Null => continue,
                         _ => {}
                     }

@@ -1,6 +1,8 @@
 use super::*;
-use crate::mesh_utils::chunkmd::{ChunkMD, CMMD};
-use crate::mesh_utils::{Chunk, ChunkMap, Cords, CubeChunk, Grid, MainChild, ToUpdate, CHUNK_DIMS};
+use crate::chunk::{
+    chunkmd::{ChunkMD, CMMD},
+    Chunk, ChunkMap, Cords, CubeChunk, Grid, MainChild, ToUpdate, CHUNK_DIMS,
+};
 
 #[derive(Event)]
 pub struct BreakBlockGlobalEvent {

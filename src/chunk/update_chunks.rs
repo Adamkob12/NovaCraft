@@ -45,7 +45,7 @@ pub(super) fn update_xsprite_chunks(
         let ChunkMD::XSpriteMD(metadata) = &mut *metadata.0.write().unwrap() else {
             continue;
         };
-        update_xsprite_mesh(Arc::clone(&breg).as_ref(), mesh, metadata);
+        update_xsprite_mesh(Arc::clone(&breg).as_ref(), mesh, metadata, CHUNK_DIMS);
         if let Some(aabb) = mesh.compute_aabb() {
             if let Some(mut comm) = commands.get_entity(entity) {
                 comm.insert(aabb)

@@ -2,8 +2,7 @@ use bevy::pbr::wireframe::WireframeConfig;
 
 use crate::action::PhysicalPlayer;
 use crate::blocks::Block;
-use crate::chunk::{Chunk, Grid, CHUNK_DIMS, LENGTH, WIDTH};
-use crate::mesh_utils::ChunkChild;
+use crate::chunk::{Chunk, ChunkChild, Grid, CHUNK_DIMS, LENGTH, WIDTH};
 
 use super::*;
 

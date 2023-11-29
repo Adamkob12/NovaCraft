@@ -52,7 +52,7 @@ pub fn handle_block_updates(
         let block = grid.read().unwrap()[*block_index];
         let (block_mesh, block_entity, block_mat) = match breg.get_mesh(&block) {
             VoxelMesh::NormalCube(mesh) => (mesh.clone(), main_child, &main_mat.0),
-            VoxelMesh::CustomMesh(mesh) => (mesh.clone(), xsprite_child, &xsprite_mat.0),
+            VoxelMesh::XSprite(mesh) => (mesh.clone(), xsprite_child, &xsprite_mat.0),
             _ => continue,
         };
         let mut surrounding_blocks = [None; 6];

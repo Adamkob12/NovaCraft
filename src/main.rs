@@ -17,7 +17,9 @@ pub mod console;
 pub mod env;
 pub mod helper_ecs_utils;
 pub mod inventory;
-pub mod mesh_utils;
+pub mod mesh_utils {
+    pub use novacraft_meshing_backend::mesh_utils::*;
+}
 pub mod player;
 pub mod terrain;
 pub mod utils;

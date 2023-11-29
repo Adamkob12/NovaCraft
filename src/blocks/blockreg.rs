@@ -1,4 +1,4 @@
-use super::{xsprite_mesh::generate_xsprite_mesh, *};
+use crate::blocks::*;
 
 #[derive(Resource, Clone)]
 pub struct BlockRegistry {
@@ -18,7 +18,7 @@ impl VoxelRegistry for BlockRegistry {
             Block::STONE => VoxelMesh::NormalCube(&self.stone_mesh),
             Block::DIRT => VoxelMesh::NormalCube(&self.dirt_mesh),
             Block::SAND => VoxelMesh::NormalCube(&self.sand_mesh),
-            Block::GREENERY => VoxelMesh::CustomMesh(&self.greenery_mesh),
+            Block::GREENERY => VoxelMesh::XSprite(&self.greenery_mesh),
         }
     }
 

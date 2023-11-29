@@ -9,7 +9,6 @@ mod spawn;
 mod update_chunks;
 
 pub use self::chunk_queue::ComputeChunk;
-use crate::mesh_utils::xsprite_mesh::*;
 use crate::prelude::*;
 use crate::terrain::TerrainConfig;
 use crate::{blocks::Block, utils::get_neighboring_chunk_cords};
@@ -48,7 +47,6 @@ pub type ChunkArr = [Block; CHUNK_TOTAL_BLOCKS];
 pub const EMPTY_CHUNK: ChunkArr = [Block::AIR; CHUNK_TOTAL_BLOCKS];
 
 pub type ChunkCords = [i32; 2];
-pub type XSpriteVIVI = Vec<(usize, usize, u32, u32)>;
 
 #[derive(Component)]
 pub struct Cords(pub ChunkCords);

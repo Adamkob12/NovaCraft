@@ -7,7 +7,7 @@ pub struct CMMD(pub RwLock<ChunkMD>);
 
 pub enum ChunkMD {
     CubeMD(MeshMD<Block>),
-    XSpriteMD(XSpriteMetaData),
+    XSpriteMD(XSpriteMetaData<Block>),
 }
 
 impl ChunkMD {

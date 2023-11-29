@@ -1,4 +1,4 @@
-use crate::{mesh_utils::ChunkCords, prelude::*};
+use crate::{chunk::ChunkCords, prelude::*};
 
 #[allow(non_snake_case)]
 pub mod INIT_BLOCKS;
