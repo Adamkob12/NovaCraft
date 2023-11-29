@@ -1,6 +1,7 @@
 #![allow(dead_code)]
 use super::{
     block_descriptor::*,
+    dynamic_property::{BlockTransformation, CommonBlockTransformations},
     existence_conditions::ExistenceCondition,
     properties::{DynamicProperty, PassiveProperty, PhysicalProperty},
     Block, Face,
@@ -25,12 +26,18 @@ impl BlockDescriptor {
                     .with_face(Face::Bottom, [2, 0]),
             ),
             dynamic: PropertyCollection::<DynamicProperty>::from_property(
-                DynamicProperty::BlockAbove(Box::new({
-                    |block| match block {
-                        Block::AIR | Block::GREENERY => Block::GRASS,
-                        _ => Block::DIRT,
-                    }
-                })),
+                DynamicProperty::BlockTransformIf(
+                    ExistenceCondition::BlockToTheSideMust(
+                        Face::Top,
+                        Box::new({
+                            |block| match block {
+                                Block::AIR | Block::GREENERY => false,
+                                _ => true,
+                            }
+                        }),
+                    ),
+                    BlockTransformation::transform_into(Block::DIRT),
+                ),
             ),
             ..Default::default()
         }
@@ -57,9 +64,10 @@ impl BlockDescriptor {
                 PassiveProperty::YieldToFallingBlock,
             ),
             dynamic: PropertyCollection::<DynamicProperty>::from_property(
-                DynamicProperty::ExistenceCondition(ExistenceCondition::BlockUnderMust(Box::new(
-                    |block| block == Block::GRASS,
-                ))),
+                DynamicProperty::ExistenceCondition(ExistenceCondition::BlockToTheSideMust(
+                    Face::Bottom,
+                    Box::new(|block| block == Block::GRASS),
+                )),
             ),
             ..Default::default()
         }

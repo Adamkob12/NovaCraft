@@ -148,7 +148,7 @@ impl Plugin for ChunkPlugin {
                 ),
             })
             .init_resource::<ChunkQueue>()
-            .init_resource::<ChunkUpdateLock>();
+            .insert_resource(LockChunkUpdate::unlocked());
         app.add_systems(
             PreUpdate,
             (reload_all.run_if(
@@ -163,7 +163,7 @@ impl Plugin for ChunkPlugin {
                 handle_chunk_spawn_tasks,
                 ((update_cube_chunks, update_xsprite_chunks), apply_deferred,
                 (apply_smooth_lighting_after_update, apply_smooth_lighting_edgecases))
-                    .chain().run_if(resource_equals(ChunkUpdateLock::unlocked())),
+                    .chain().run_if(resource_equals(LockChunkUpdate::unlocked())),
             ),
         )
         .add_systems(PostUpdate, (update_close_chunks, insert_collider_for_close_chunks))
