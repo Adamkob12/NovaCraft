@@ -238,7 +238,8 @@ impl Plugin for PlayerPlugin {
                 setup_player.run_if(
                     not(any_with_component::<ComputeChunk>())
                         .and_then(not(any_with_component::<PlayerCamera>()))
-                        .and_then(any_with_component::<Collider>()), // .and_then(in_state::<AssetLoadingState>(AssetLoadingState::Loaded)),
+                        .and_then(any_with_component::<Collider>())
+                        .and_then(in_state::<AssetLoadingState>(AssetLoadingState::Loaded)),
                 ),
             )
             .add_systems(

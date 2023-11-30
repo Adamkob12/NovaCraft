@@ -1,4 +1,3 @@
-#![allow(unused, unreachable_patterns)]
 use super::block_descriptor::*;
 use super::properties::*;
 use crate::AssetLoadingState;

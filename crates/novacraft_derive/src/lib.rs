@@ -221,6 +221,7 @@ fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
         use crate::blocks::existence_conditions::*;
         use crate::blocks::properties::*;
         #[derive(bevy::prelude::Resource)]
+        #[repr(C)]
         pub struct BlockPropertyRegistry<P: BlockProperty> {
             #(#lowercase_vidents: PropertyCollection<P>),*
         }
@@ -262,11 +263,12 @@ fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
         }
 
         impl VoxelRegistry for MeshRegistry {
-            type Voxel = Block;
+            type Voxel = #enum_name;
 
-            fn get_mesh(&self, voxel: &Self::Voxel) -> VoxelMesh<&Mesh> {
+            fn get_mesh(&self, voxel: &#enum_name) -> VoxelMesh<&Mesh> {
+                // println!("getting {:?}", voxel);
                 match voxel {
-                    #(#lowercase_vidents => self.#lowercase_vidents.ref_mesh()),*
+                    #(#enum_name::#capitalized_vidents => self.#lowercase_vidents.ref_mesh()),*
                 }
             }
 
@@ -288,8 +290,8 @@ fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
             }
 
             #[allow(unused_variables)]
-            fn is_covering(&self, voxel: &Self::Voxel, side: prelude::Face) -> bool {
-                true
+            fn is_covering(&self, voxel: &#enum_name, side: prelude::Face) -> bool {
+                *voxel as u16 != 0 && *voxel != #enum_name::GREENERY
             }
         }
     };
