@@ -11,7 +11,6 @@ pub mod properties;
 
 pub use INIT_BLOCKS::*;
 
-use self::{meshreg::MeshRegistry, properties::*};
 use existence_conditions::ExistenceCondition;
 
 pub type BlockId = u16;
@@ -41,10 +40,6 @@ pub(super) const XSPRITE_SCALE: f32 = 0.85;
 impl Plugin for BlocksPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<WorldBlockUpdate>();
-        app.init_resource::<MeshRegistry>()
-            .init_resource::<BlockPropertyRegistry<PassiveProperty>>()
-            .init_resource::<BlockPropertyRegistry<PhysicalProperty>>()
-            .init_resource::<BlockPropertyRegistry<PerceptibleProperty>>()
-            .init_resource::<BlockPropertyRegistry<DynamicProperty>>();
+        app.add_plugins(BlockRegistriesPlugin);
     }
 }

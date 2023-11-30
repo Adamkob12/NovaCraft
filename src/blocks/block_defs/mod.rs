@@ -20,10 +20,11 @@ impl BlockDescriptor {
 
     pub fn Grass() -> Self {
         BlockDescriptor {
-            mesh_gen_data: MeshGenData::Cube(
+            mesh_builder: MeshBuilder::Cube(
                 CubeTextureCords::uniform([1, 0])
                     .with_face(Face::Top, [0, 0])
-                    .with_face(Face::Bottom, [2, 0]),
+                    .with_face(Face::Bottom, [2, 0])
+                    .into(),
             ),
             dynamic: PropertyCollection::<DynamicProperty>::from_property(
                 DynamicProperty::BlockTransformIf(
@@ -45,21 +46,21 @@ impl BlockDescriptor {
 
     pub fn Stone() -> Self {
         BlockDescriptor {
-            mesh_gen_data: MeshGenData::Cube(CubeTextureCords::uniform([3, 0])),
+            mesh_builder: MeshBuilder::Cube(CubeTextureCords::uniform([3, 0]).into()),
             ..Default::default()
         }
     }
 
     pub fn Dirt() -> Self {
         BlockDescriptor {
-            mesh_gen_data: MeshGenData::Cube(CubeTextureCords::uniform([2, 0])),
+            mesh_builder: MeshBuilder::Cube(CubeTextureCords::uniform([2, 0]).into()),
             ..Default::default()
         }
     }
 
     pub fn Greenery() -> Self {
         BlockDescriptor {
-            mesh_gen_data: MeshGenData::XSprite(XSpriteTextureCords::uniform([4, 0])),
+            mesh_builder: MeshBuilder::XSprite(XSpriteTextureCords::uniform([4, 0]).into()),
             passive: PropertyCollection::<PassiveProperty>::from_property(
                 PassiveProperty::YieldToFallingBlock,
             ),
@@ -75,7 +76,7 @@ impl BlockDescriptor {
 
     pub fn Sand() -> Self {
         BlockDescriptor {
-            mesh_gen_data: MeshGenData::Cube(CubeTextureCords::uniform([6, 0])),
+            mesh_builder: MeshBuilder::Cube(CubeTextureCords::uniform([6, 0]).into()),
             physical: PropertyCollection::<PhysicalProperty>::from_property(
                 PhysicalProperty::AffectedByGravity,
             ),

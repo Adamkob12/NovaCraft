@@ -1,5 +1,5 @@
 use super::{chunkmd::CMMD, *};
-use crate::blocks::meshreg::MeshRegistry;
+use crate::blocks::MeshRegistry;
 
 // "Introduce" means cull the sides between the chunks (the intersection). And apply Smooth
 // Lighting if needed.

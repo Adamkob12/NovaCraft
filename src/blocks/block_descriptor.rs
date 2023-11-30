@@ -36,7 +36,7 @@ impl<T: BlockProperty> std::ops::Deref for PropertyCollection<T> {
 
 #[derive(Default)]
 pub struct BlockDescriptor {
-    pub mesh_gen_data: MeshGenData,
+    pub mesh_builder: MeshBuilder,
     pub physical: PropertyCollection<PhysicalProperty>,
     pub passive: PropertyCollection<PassiveProperty>,
     pub perceptible: PropertyCollection<PerceptibleProperty>,
@@ -44,30 +44,21 @@ pub struct BlockDescriptor {
 }
 
 #[derive(Default)]
-pub enum MeshGenData {
-    Cube(CubeTextureCords),
-    XSprite(XSpriteTextureCords),
-    External(ExternalMesh<CubeTextureCords>),
+pub enum MeshBuilder {
+    Cube(CubeMeshBuilder),
+    XSprite(XSpriteMeshBuilder),
+    External(ExternalMesh<CubeMeshBuilder>),
     #[default]
-    Air,
+    Null,
 }
 
-impl MeshGenData {
-    pub fn get_path(&self) -> &str {
+impl Into<VoxelMesh<Mesh>> for MeshBuilder {
+    fn into(self) -> VoxelMesh<Mesh> {
         match self {
-            Self::External(ext) => ext.mesh_asset.get_path(),
-            _ => panic!("Can only get path from Externally imported meshes"),
-        }
-    }
-}
-
-impl Into<Mesh> for MeshGenData {
-    fn into(self) -> Mesh {
-        match self {
-            Self::Air => Mesh::new(PrimitiveTopology::TriangleList),
-            Self::Cube(t) => t.into(),
-            Self::XSprite(t) => t.into(),
-            Self::External(t) => t.into(),
+            Self::Null => VoxelMesh::Null,
+            Self::Cube(t) => VoxelMesh::NormalCube(t.into()),
+            Self::XSprite(t) => VoxelMesh::XSprite(t.into()),
+            Self::External(t) => VoxelMesh::CustomMesh(t.into()),
         }
     }
 }
@@ -85,45 +76,21 @@ pub struct XSpriteTextureCords {
     pub sprite: AtlasDims,
 }
 
-impl Into<Mesh> for CubeTextureCords {
-    fn into(self) -> Mesh {
-        generate_voxel_mesh(
-            VOXEL_DIMS,
-            TEXTURE_ATLAS_DIMS,
-            [
-                (Top, self.top),
-                (Bottom, self.bottom),
-                (Right, self.right),
-                (Left, self.left),
-                (Back, self.back),
-                (Forward, self.forward),
-            ],
-            VOXEL_CENTER,
-            PADDING,
-            Some(COLOR_INTENSITY),
-            ALPHA,
-        )
+impl Into<CubeMeshBuilder> for CubeTextureCords {
+    fn into(self) -> CubeMeshBuilder {
+        CubeMeshBuilder::from_cube_texture_cords(self)
     }
 }
 
-impl Into<Mesh> for XSpriteTextureCords {
-    fn into(self) -> Mesh {
-        generate_xsprite_mesh(
-            VOXEL_DIMS,
-            TEXTURE_ATLAS_DIMS,
-            self.sprite,
-            VOXEL_CENTER,
-            PADDING,
-            Some(COLOR_INTENSITY),
-            ALPHA,
-            XSPRITE_SCALE,
-        )
+impl Into<XSpriteMeshBuilder> for XSpriteTextureCords {
+    fn into(self) -> XSpriteMeshBuilder {
+        XSpriteMeshBuilder::from_xsprite_texture_cords(self)
     }
 }
 
-impl Into<Mesh> for ExternalMesh<CubeTextureCords> {
+impl Into<Mesh> for ExternalMesh<CubeMeshBuilder> {
     fn into(self) -> Mesh {
-        return self.while_loading.into();
+        return self.alt_mesh.into();
     }
 }
 
@@ -160,23 +127,158 @@ impl CubeTextureCords {
 
 pub type AtlasDims = [u32; 2];
 
-pub enum CustomMeshAsset {
-    PathToMesh(&'static str),
+pub struct ExternalMesh<M: Into<Mesh>> {
+    alt_mesh: M,
 }
 
-impl CustomMeshAsset {
-    pub fn from_path(path: &'static str) -> CustomMeshAsset {
-        CustomMeshAsset::PathToMesh(path)
-    }
+pub struct CubeMeshBuilder {
+    voxel_dims: [f32; 3],
+    voxel_center: [f32; 3],
+    texture_atlas_dims: [u32; 2],
+    padding: f32,
+    color_intensity: f32,
+    alpha: f32,
+    cube_texture_cords: CubeTextureCords,
+}
 
-    pub fn get_path(&self) -> &str {
-        match self {
-            Self::PathToMesh(path) => *path,
+#[allow(dead_code)]
+impl CubeMeshBuilder {
+    pub fn from_cube_texture_cords(cube_texture_cords: CubeTextureCords) -> CubeMeshBuilder {
+        Self {
+            voxel_dims: VOXEL_DIMS,
+            voxel_center: VOXEL_CENTER,
+            texture_atlas_dims: TEXTURE_ATLAS_DIMS,
+            padding: PADDING,
+            color_intensity: COLOR_INTENSITY,
+            alpha: ALPHA,
+            cube_texture_cords,
         }
     }
+
+    pub fn build(self) -> Mesh {
+        generate_voxel_mesh(
+            self.voxel_dims,
+            self.texture_atlas_dims,
+            [
+                (Top, self.cube_texture_cords.top),
+                (Bottom, self.cube_texture_cords.bottom),
+                (Right, self.cube_texture_cords.right),
+                (Left, self.cube_texture_cords.left),
+                (Back, self.cube_texture_cords.back),
+                (Forward, self.cube_texture_cords.forward),
+            ],
+            self.voxel_center,
+            self.padding,
+            Some(self.color_intensity),
+            self.alpha,
+        )
+    }
+
+    pub fn override_alpha(mut self, alpha: f32) -> Self {
+        self.alpha = alpha;
+        self
+    }
+    pub fn override_color_intensity(mut self, color_intensity: f32) -> Self {
+        self.color_intensity = color_intensity;
+        self
+    }
+    pub fn override_padding(mut self, padding: f32) -> Self {
+        self.padding = padding;
+        self
+    }
+    pub fn override_texture_atlas_dims(mut self, texture_atlas_dims: [u32; 2]) -> Self {
+        self.texture_atlas_dims = texture_atlas_dims;
+        self
+    }
+    pub fn override_voxel_center(mut self, voxel_center: [f32; 3]) -> Self {
+        self.voxel_center = voxel_center;
+        self
+    }
+    pub fn override_voxel_dims(mut self, voxel_dims: [f32; 3]) -> Self {
+        self.voxel_dims = voxel_dims;
+        self
+    }
 }
 
-pub struct ExternalMesh<M: Into<Mesh>> {
-    mesh_asset: CustomMeshAsset,
-    while_loading: M,
+pub struct XSpriteMeshBuilder {
+    voxel_dims: [f32; 3],
+    voxel_center: [f32; 3],
+    texture_atlas_dims: [u32; 2],
+    padding: f32,
+    color_intensity: f32,
+    alpha: f32,
+    xsprite_scale: f32,
+    xsprite_texture_cords: XSpriteTextureCords,
+}
+
+#[allow(dead_code)]
+impl XSpriteMeshBuilder {
+    pub fn from_xsprite_texture_cords(
+        xsprite_texture_cords: XSpriteTextureCords,
+    ) -> XSpriteMeshBuilder {
+        Self {
+            voxel_dims: VOXEL_DIMS,
+            voxel_center: VOXEL_CENTER,
+            texture_atlas_dims: TEXTURE_ATLAS_DIMS,
+            padding: PADDING,
+            color_intensity: COLOR_INTENSITY,
+            alpha: ALPHA,
+            xsprite_scale: XSPRITE_SCALE,
+            xsprite_texture_cords,
+        }
+    }
+
+    pub fn build(self) -> Mesh {
+        generate_xsprite_mesh(
+            self.voxel_dims,
+            self.texture_atlas_dims,
+            self.xsprite_texture_cords.sprite,
+            self.voxel_center,
+            self.padding,
+            Some(self.color_intensity),
+            self.alpha,
+            self.xsprite_scale,
+        )
+    }
+
+    pub fn override_alpha(mut self, alpha: f32) -> Self {
+        self.alpha = alpha;
+        self
+    }
+    pub fn override_color_intensity(mut self, color_intensity: f32) -> Self {
+        self.color_intensity = color_intensity;
+        self
+    }
+    pub fn override_padding(mut self, padding: f32) -> Self {
+        self.padding = padding;
+        self
+    }
+    pub fn override_texture_atlas_dims(mut self, texture_atlas_dims: [u32; 2]) -> Self {
+        self.texture_atlas_dims = texture_atlas_dims;
+        self
+    }
+    pub fn override_voxel_center(mut self, voxel_center: [f32; 3]) -> Self {
+        self.voxel_center = voxel_center;
+        self
+    }
+    pub fn override_voxel_dims(mut self, voxel_dims: [f32; 3]) -> Self {
+        self.voxel_dims = voxel_dims;
+        self
+    }
+    pub fn override_xsprite_scale(mut self, xsprite_scale: f32) -> Self {
+        self.xsprite_scale = xsprite_scale;
+        self
+    }
+}
+
+impl Into<Mesh> for CubeMeshBuilder {
+    fn into(self) -> Mesh {
+        self.build()
+    }
+}
+
+impl Into<Mesh> for XSpriteMeshBuilder {
+    fn into(self) -> Mesh {
+        self.build()
+    }
 }

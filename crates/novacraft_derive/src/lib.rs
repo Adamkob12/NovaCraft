@@ -59,7 +59,6 @@ pub fn init_block_properties(input: proc_macro::TokenStream) -> proc_macro::Toke
 }
 
 const CUSTOM_MESH_ATTRIBUTE: &str = "custom_mesh";
-const PATH_ATTRIBUTE: &str = "path";
 
 #[proc_macro_derive(InitBlocks, attributes(custom_mesh))]
 pub fn init_blocks_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -95,7 +94,7 @@ fn blocks_enum(input: &DeriveInput) -> (TokenStream, TokenStream, TokenStream, s
     let enum_name: syn::Ident = syn::Ident::new_raw("Block", vidents.clone().last().__span());
 
     let blocks_enum = quote! { #[repr(u16)]
-        #[derive(Eq, PartialEq, Clone, Copy, bevy::prelude::Component)]
+        #[derive(Eq, PartialEq, Clone, Copy, bevy::prelude::Component, Hash)]
         pub enum #enum_name {
             #(#capitalized_vidents = #id_vals),*
         }
@@ -171,19 +170,6 @@ fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
         })
         .collect();
 
-    let cm_fields: Vec<&syn::Field> = custom_mesh_variants
-        .iter()
-        .map(|var| {
-            if let syn::Fields::Unnamed(ref f) = var.fields {
-                f.unnamed.first().expect("aa")
-            } else if let syn::Fields::Named(ref f) = var.fields {
-                f.named.first().expect("ab")
-            } else {
-                panic!()
-            }
-        })
-        .collect();
-
     let props: Vec<Vec<syn::Field>> = variants
         .iter()
         .filter_map(|var| {
@@ -207,16 +193,6 @@ fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
         })
         .collect();
     let fpaths: Vec<syn::Path> = fields
-        .iter()
-        .map(|&f| {
-            let syn::Type::Path(ref path) = f.ty else {
-                panic!("f");
-            };
-            path.path.clone()
-        })
-        .collect();
-
-    let cm_fpaths: Vec<syn::Path> = cm_fields
         .iter()
         .map(|&f| {
             let syn::Type::Path(ref path) = f.ty else {
@@ -271,24 +247,52 @@ fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
     };
 
     let def_meshreg = quote! {
-        #[derive(Resource)]
+        use crate::blocks::*;
+        #[derive(Resource, Clone)]
         pub struct MeshRegistry {
-            #(pub #lowercase_vidents: Mesh),*
+            #(#lowercase_vidents: VoxelMesh<Mesh>),*
         }
 
         impl Default for MeshRegistry {
             fn default() -> Self {
                 Self {
-                    #(#lowercase_vidents: #fpaths::#vidents().mesh_gen_data.into()),*
+                    #(#lowercase_vidents: #fpaths::#vidents().mesh_builder.into()),*
                 }
             }
         }
+
+        impl VoxelRegistry for MeshRegistry {
+            type Voxel = Block;
+
+            fn get_mesh(&self, voxel: &Self::Voxel) -> VoxelMesh<&Mesh> {
+                match voxel {
+                    #(#lowercase_vidents => self.#lowercase_vidents.ref_mesh()),*
+                }
+            }
+
+            fn all_attributes(&self) -> Vec<MeshVertexAttribute> {
+                vec![
+                    Mesh::ATTRIBUTE_POSITION,
+                    Mesh::ATTRIBUTE_UV_0,
+                    Mesh::ATTRIBUTE_COLOR,
+                    Mesh::ATTRIBUTE_NORMAL,
+                ]
+            }
+
+            fn get_voxel_dimensions(&self) -> [f32; 3] {
+                VOXEL_DIMS
+            }
+
+            fn get_center(&self) -> [f32; 3] {
+                VOXEL_CENTER
+            }
+
+            #[allow(unused_variables)]
+            fn is_covering(&self, voxel: &Self::Voxel, side: prelude::Face) -> bool {
+                true
+            }
+        }
     };
-    // let mut asset_paths = vec![];
-    // for i in 0..custom_mesh_variants.len() {
-    //     asset_paths.push(syn::LitStr::new())
-    // }
-    // LitStr::new(#cm_fpaths::#cm_vindets.mesh_gen_data.get_path())
 
     let args = get_args_of_custom_mesh_attribute_as_token_stream(custom_mesh_variants);
     let registry_plugin = quote! {
@@ -299,10 +303,14 @@ fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
         impl Plugin for BlockRegistriesPlugin {
             fn build(&self, app: &mut App) {
                 app.add_state::<crate::AssetLoadingState>()
-                    .add_loading_state(LoadingState::new(AssetLoadingState::Loading).continue_to_state(AssetLoadingState::Loaded));
+                    .add_loading_state(LoadingState::new(AssetLoadingState::Loading)
+                        .continue_to_state(AssetLoadingState::Loaded));
 
                 #(app.init_resource::<BlockPropertyRegistry<#props_path>>();)*
                 app.init_resource::<MeshRegistry>();
+
+                app.add_systems(OnEnter(AssetLoadingState::Loaded),
+                    put_external_meshes_in_mesh_registry_after_load);
 
                 app.add_collection_to_loading_state::<_, ExternalMeshes>(AssetLoadingState::Loading);
             }
@@ -311,7 +319,6 @@ fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
         #[derive(AssetCollection, Resource)]
         struct ExternalMeshes {
             #(
-                // #[asset(path = #cm_fpaths::#cm_vindets.mesh_gen_data.get_path())]
                 #[asset(#args)]
                 #cm_lowercase_vindents: bevy::prelude::Handle<Mesh>),
             *
@@ -322,7 +329,8 @@ fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
             mut mreg: ResMut<MeshRegistry>,
             loaded_meshes: Res<ExternalMeshes>,
         ) {
-            #(mreg.#cm_lowercase_vindents = meshes.remove(&loaded_meshes.#cm_lowercase_vindents).unwrap());*
+            bevy::log::info!("All assets have been loaded.");
+            #(mreg.#cm_lowercase_vindents.set(meshes.remove(&loaded_meshes.#cm_lowercase_vindents).unwrap()));*
         }
     };
 
@@ -350,7 +358,7 @@ fn get_args_of_custom_mesh_attribute_as_token_stream(
             match cm_attr.meta {
                 syn::Meta::List(ref list) => list.tokens.clone(),
                 _ => {
-                    panic!("Expected list-style attribute, as in #[custom_mesh(\"path/to/mesh\")]")
+                    panic!("Expected list-style attribute, as in #[custom_mesh(path = \"path/to/mesh\")]")
                 }
             }
         })

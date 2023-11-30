@@ -1,9 +1,16 @@
+#![allow(unused, unreachable_patterns)]
 use super::block_descriptor::*;
 use super::properties::*;
 use crate::AssetLoadingState;
 use novacraft_derive::InitBlocks;
 
-#[allow(non_snake_case, non_camel_case_types)]
+#[allow(
+    non_snake_case,
+    non_camel_case_types,
+    dead_code,
+    unused,
+    unreachable_patterns
+)]
 #[derive(InitBlocks)]
 pub enum BLOCKS_INITIALIZER {
     Air {
@@ -13,7 +20,6 @@ pub enum BLOCKS_INITIALIZER {
         perceptible: PerceptibleProperty,
         dynamic: DynamicProperty,
     },
-    #[custom_mesh(path = "Hi")]
     Dirt(BlockDescriptor),
     Grass(BlockDescriptor),
     Stone(BlockDescriptor),

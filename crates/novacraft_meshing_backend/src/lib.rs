@@ -48,6 +48,7 @@ pub trait VoxelRegistry {
 /// (width, height, length) - note that bevy considers the "y position" to be height.
 pub type Dimensions = (usize, usize, usize);
 
+#[derive(Clone)]
 pub enum VoxelMesh<T> {
     NormalCube(T),
     XSprite(T),
@@ -71,6 +72,24 @@ impl<T> VoxelMesh<T> {
             Self::XSprite(t) => t,
             Self::CustomMesh(t) => t,
             Self::Null => panic!("{}", msg),
+        }
+    }
+
+    pub fn ref_mesh(&self) -> VoxelMesh<&T> {
+        match self {
+            VoxelMesh::NormalCube(t) => VoxelMesh::NormalCube(t),
+            VoxelMesh::XSprite(t) => VoxelMesh::XSprite(t),
+            VoxelMesh::CustomMesh(t) => VoxelMesh::CustomMesh(t),
+            VoxelMesh::Null => VoxelMesh::Null,
+        }
+    }
+
+    pub fn set(&mut self, new_mesh: T) {
+        match self {
+            VoxelMesh::NormalCube(t) => *t = new_mesh,
+            VoxelMesh::XSprite(t) => *t = new_mesh,
+            VoxelMesh::CustomMesh(t) => *t = new_mesh,
+            VoxelMesh::Null => {}
         }
     }
 }
