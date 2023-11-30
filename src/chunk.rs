@@ -162,7 +162,7 @@ impl Plugin for ChunkPlugin {
                 ((update_cube_chunks, update_xsprite_chunks), apply_deferred,
                 (apply_smooth_lighting_after_update, apply_smooth_lighting_edgecases))
                     .chain().run_if(resource_equals(LockChunkUpdate::unlocked())),
-            ),
+            ).run_if(in_state(AssetLoadingState::Loaded)),
         )
         .add_systems(PostUpdate, (update_close_chunks, insert_collider_for_close_chunks))
         .add_systems(

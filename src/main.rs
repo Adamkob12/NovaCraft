@@ -8,6 +8,7 @@ pub mod prelude {
     pub mod notical {
         pub use novacraft_meshing_backend::prelude::direction::*;
     }
+    pub use crate::AssetLoadingState;
 }
 
 pub mod action;
