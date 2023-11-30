@@ -4,15 +4,14 @@ use crate::{chunk::ChunkCords, prelude::*};
 pub mod INIT_BLOCKS;
 mod block_defs;
 mod block_descriptor;
-pub mod blockreg;
 pub mod dynamic_property;
 pub mod existence_conditions;
+pub mod meshreg;
 pub mod properties;
-mod xsprite_mesh;
 
 pub use INIT_BLOCKS::*;
 
-use self::{blockreg::BlockRegistry, properties::*};
+use self::{meshreg::MeshRegistry, properties::*};
 use existence_conditions::ExistenceCondition;
 
 pub type BlockId = u16;
@@ -37,12 +36,12 @@ pub(super) const TEXTURE_ATLAS_DIMS: [u32; 2] = [10, 10];
 pub(super) const PADDING: f32 = 0.0;
 pub(super) const COLOR_INTENSITY: f32 = 1.0;
 pub(super) const ALPHA: f32 = 1.0;
-pub(super) const GREENERY_SCALE: f32 = 0.85;
+pub(super) const XSPRITE_SCALE: f32 = 0.85;
 
 impl Plugin for BlocksPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<WorldBlockUpdate>();
-        app.init_resource::<BlockRegistry>()
+        app.init_resource::<MeshRegistry>()
             .init_resource::<BlockPropertyRegistry<PassiveProperty>>()
             .init_resource::<BlockPropertyRegistry<PhysicalProperty>>()
             .init_resource::<BlockPropertyRegistry<PerceptibleProperty>>()

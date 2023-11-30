@@ -1,12 +1,12 @@
 use super::{chunkmd::CMMD, *};
-use crate::blocks::blockreg::BlockRegistry;
+use crate::blocks::meshreg::MeshRegistry;
 
 pub(super) fn apply_smooth_lighting_after_update(
     mut meshes: ResMut<Assets<Mesh>>,
     mesh_query: Query<(&Handle<Mesh>, &CMMD, &Parent), With<CubeChunk>>,
     chunks_to_apply_q: Query<(&Children, &AdjChunkGrids, &Grid)>,
     mut removed_components2: RemovedComponents<ToUpdate>,
-    breg: Res<BlockRegistry>,
+    breg: Res<MeshRegistry>,
 ) {
     let breg = Arc::new(breg.into_inner().to_owned());
     for chunk_entity in removed_components2.read() {
@@ -49,7 +49,7 @@ pub(super) fn apply_smooth_lighting_after_introduce(
     mesh_query: Query<(&Handle<Mesh>, &CMMD, &Parent), With<CubeChunk>>,
     chunks_to_apply_q: Query<(&Children, &AdjChunkGrids, &Grid)>,
     mut removed_components: RemovedComponents<ToIntroduce>,
-    breg: Res<BlockRegistry>,
+    breg: Res<MeshRegistry>,
 ) {
     let breg = Arc::new(breg.into_inner().to_owned());
     for chunk_entity in removed_components.read() {
@@ -97,7 +97,7 @@ pub(super) fn apply_smooth_lighting_edgecases(
         (Entity, &Children, &AdjChunkGrids, &Grid, &ToApplySL),
         Without<ToConnect>,
     >,
-    breg: Res<BlockRegistry>,
+    breg: Res<MeshRegistry>,
 ) {
     let breg = Arc::new(breg.into_inner().to_owned());
     for (entity, children, acj, Grid(grid), apply_sl) in chunks_to_apply_q.iter() {

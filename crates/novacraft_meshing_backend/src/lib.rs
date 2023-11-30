@@ -8,7 +8,6 @@ pub(crate) mod update;
 pub mod util;
 pub(crate) mod voxel_mesh;
 
-use bevy::log::warn;
 use bevy::prelude::*;
 use bevy::render::mesh::MeshVertexAttribute;
 
@@ -52,6 +51,7 @@ pub type Dimensions = (usize, usize, usize);
 pub enum VoxelMesh<T> {
     NormalCube(T),
     XSprite(T),
+    CustomMesh(T),
     Null,
 }
 
@@ -60,6 +60,7 @@ impl<T> VoxelMesh<T> {
         match self {
             Self::NormalCube(t) => t,
             Self::XSprite(t) => t,
+            Self::CustomMesh(t) => t,
             Self::Null => panic!("Triead unwrapping a Null VoxelMesh type."),
         }
     }
@@ -67,10 +68,8 @@ impl<T> VoxelMesh<T> {
     pub fn expect(self, msg: &str) -> T {
         match self {
             Self::NormalCube(t) => t,
-            Self::XSprite(t) => {
-                warn!("Custom Meshes are still not properly implemented!");
-                t
-            }
+            Self::XSprite(t) => t,
+            Self::CustomMesh(t) => t,
             Self::Null => panic!("{}", msg),
         }
     }

@@ -1,5 +1,5 @@
 use super::{ChunkCords, ChunkMap, RenderSettings, CHUNK_TOTAL_BLOCKS};
-use crate::blocks::blockreg::BlockRegistry;
+use crate::blocks::meshreg::MeshRegistry;
 use crate::chunk::{Block, CHUNK_DIMS};
 use crate::prelude::*;
 use crate::terrain::{generate_chunk, TerrainConfig};
@@ -42,7 +42,7 @@ impl ChunkQueue {
         &mut self,
         chunk_map: &mut ChunkMap,
         mut commands: Commands,
-        breg: &Arc<BlockRegistry>,
+        breg: &Arc<MeshRegistry>,
         condition: Option<F>,
         render_settings: &RenderSettings,
         terrain_config: &TerrainConfig,

@@ -58,7 +58,10 @@ pub fn init_block_properties(input: proc_macro::TokenStream) -> proc_macro::Toke
     .into()
 }
 
-#[proc_macro_derive(InitBlocks)]
+const CUSTOM_MESH_ATTRIBUTE: &str = "custom_mesh";
+const PATH_ATTRIBUTE: &str = "path";
+
+#[proc_macro_derive(InitBlocks, attributes(custom_mesh))]
 pub fn init_blocks_derive(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     let ast = syn::parse(input).unwrap();
 
@@ -128,6 +131,14 @@ fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
     let syn::Data::Enum(syn::DataEnum { variants, .. }) = &input.data else {
         panic!("Init Blocks macro is only available to enums");
     };
+    let custom_mesh_variants: Vec<&syn::Variant> = variants
+        .iter()
+        .filter(|var| {
+            var.attrs
+                .iter()
+                .any(|attr| attr.path().is_ident(CUSTOM_MESH_ATTRIBUTE))
+        })
+        .collect();
     let vidents: Vec<syn::Ident> = variants.iter().map(|var| var.ident.clone()).collect();
     let lowercase_vidents: Vec<syn::Ident> = vidents
         .iter()
@@ -136,6 +147,15 @@ fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
     let capitalized_vidents: Vec<syn::Ident> = vidents
         .iter()
         .map(|ident| syn::Ident::new(format!("{}", ident).to_uppercase().as_str(), ident.span()))
+        .collect();
+
+    let cm_vindets: Vec<syn::Ident> = custom_mesh_variants
+        .iter()
+        .map(|var| var.ident.clone())
+        .collect();
+    let cm_lowercase_vindents: Vec<syn::Ident> = cm_vindets
+        .iter()
+        .map(|ident| syn::Ident::new(format!("{}", ident).to_lowercase().as_str(), ident.span()))
         .collect();
 
     let fields: Vec<&syn::Field> = variants
@@ -150,6 +170,20 @@ fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
             }
         })
         .collect();
+
+    let cm_fields: Vec<&syn::Field> = custom_mesh_variants
+        .iter()
+        .map(|var| {
+            if let syn::Fields::Unnamed(ref f) = var.fields {
+                f.unnamed.first().expect("aa")
+            } else if let syn::Fields::Named(ref f) = var.fields {
+                f.named.first().expect("ab")
+            } else {
+                panic!()
+            }
+        })
+        .collect();
+
     let props: Vec<Vec<syn::Field>> = variants
         .iter()
         .filter_map(|var| {
@@ -160,6 +194,7 @@ fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
             }
         })
         .collect();
+
     let props = props.first().unwrap();
     let props_idents: Vec<syn::Ident> = props.iter().map(|f| f.ident.clone().unwrap()).collect();
     let props_path: Vec<syn::Path> = props
@@ -172,6 +207,16 @@ fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
         })
         .collect();
     let fpaths: Vec<syn::Path> = fields
+        .iter()
+        .map(|&f| {
+            let syn::Type::Path(ref path) = f.ty else {
+                panic!("f");
+            };
+            path.path.clone()
+        })
+        .collect();
+
+    let cm_fpaths: Vec<syn::Path> = cm_fields
         .iter()
         .map(|&f| {
             let syn::Type::Path(ref path) = f.ty else {
@@ -201,13 +246,12 @@ fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
         use crate::blocks::properties::*;
         #[derive(bevy::prelude::Resource)]
         pub struct BlockPropertyRegistry<P: BlockProperty> {
-            #(pub #lowercase_vidents: PropertyCollection<P>),*
+            #(#lowercase_vidents: PropertyCollection<P>),*
         }
 
         #(
         #def_impls
         )*
-
 
         impl<P: BlockProperty> BlockPropertyRegistry<P> {
             pub fn get_properties(&self, block: &#enum_name) -> &[P] {
@@ -226,5 +270,90 @@ fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
         }
     };
 
-    impl_default.into()
+    let def_meshreg = quote! {
+        #[derive(Resource)]
+        pub struct MeshRegistry {
+            #(pub #lowercase_vidents: Mesh),*
+        }
+
+        impl Default for MeshRegistry {
+            fn default() -> Self {
+                Self {
+                    #(#lowercase_vidents: #fpaths::#vidents().mesh_gen_data.into()),*
+                }
+            }
+        }
+    };
+    // let mut asset_paths = vec![];
+    // for i in 0..custom_mesh_variants.len() {
+    //     asset_paths.push(syn::LitStr::new())
+    // }
+    // LitStr::new(#cm_fpaths::#cm_vindets.mesh_gen_data.get_path())
+
+    let args = get_args_of_custom_mesh_attribute_as_token_stream(custom_mesh_variants);
+    let registry_plugin = quote! {
+        use bevy_asset_loader::prelude::*;
+        use bevy::prelude::*;
+        pub struct BlockRegistriesPlugin;
+
+        impl Plugin for BlockRegistriesPlugin {
+            fn build(&self, app: &mut App) {
+                app.add_state::<crate::AssetLoadingState>()
+                    .add_loading_state(LoadingState::new(AssetLoadingState::Loading).continue_to_state(AssetLoadingState::Loaded));
+
+                #(app.init_resource::<BlockPropertyRegistry<#props_path>>();)*
+                app.init_resource::<MeshRegistry>();
+
+                app.add_collection_to_loading_state::<_, ExternalMeshes>(AssetLoadingState::Loading);
+            }
+        }
+
+        #[derive(AssetCollection, Resource)]
+        struct ExternalMeshes {
+            #(
+                // #[asset(path = #cm_fpaths::#cm_vindets.mesh_gen_data.get_path())]
+                #[asset(#args)]
+                #cm_lowercase_vindents: bevy::prelude::Handle<Mesh>),
+            *
+        }
+
+        fn put_external_meshes_in_mesh_registry_after_load(
+            mut meshes: ResMut<Assets<Mesh>>,
+            mut mreg: ResMut<MeshRegistry>,
+            loaded_meshes: Res<ExternalMeshes>,
+        ) {
+            #(mreg.#cm_lowercase_vindents = meshes.remove(&loaded_meshes.#cm_lowercase_vindents).unwrap());*
+        }
+    };
+
+    let f = quote! {
+        #impl_default
+        #def_meshreg
+        #registry_plugin
+    };
+
+    f.into()
+}
+
+fn get_args_of_custom_mesh_attribute_as_token_stream(
+    variants: Vec<&syn::Variant>,
+) -> Vec<TokenStream> {
+    let mut args = vec![];
+    variants.iter().for_each(|&var| {
+        args.push({
+            // we can unwrap this, because variants has been filtered already
+            let cm_attr = var
+                .attrs
+                .iter()
+                .find(|attr| attr.path().is_ident(CUSTOM_MESH_ATTRIBUTE))
+                .unwrap();
+            match cm_attr.meta {
+                syn::Meta::List(ref list) => list.tokens.clone(),
+                _ => {
+                    panic!("Expected list-style attribute, as in #[custom_mesh(\"path/to/mesh\")]")
+                }
+            }
+        })
+    });
+    args
 }

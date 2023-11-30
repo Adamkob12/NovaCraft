@@ -3,13 +3,13 @@ use parry3d::shape::TriMeshFlags;
 
 use super::{chunkmd::*, *};
 use crate::{
-    action::blockreg::BlockRegistry, mesh_utils::xsprite_mesh::update_xsprite_mesh, prelude::*,
+    action::meshreg::MeshRegistry, mesh_utils::xsprite_mesh::update_xsprite_mesh, prelude::*,
 };
 
 pub(super) fn update_cube_chunks(
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
-    breg: Res<BlockRegistry>,
+    breg: Res<MeshRegistry>,
     mut chunks_to_update: Query<(Entity, &CMMD, &Handle<Mesh>), (With<ToUpdate>, With<CubeChunk>)>,
 ) {
     let breg = Arc::new(breg.into_inner().clone());
@@ -36,7 +36,7 @@ pub(super) fn update_cube_chunks(
 pub(super) fn update_xsprite_chunks(
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
-    breg: Res<BlockRegistry>,
+    breg: Res<MeshRegistry>,
     chunks_to_update: Query<(Entity, &CMMD, &Handle<Mesh>), (With<ToUpdate>, With<XSpriteChunk>)>,
 ) {
     let breg = Arc::new(breg.into_inner().clone());

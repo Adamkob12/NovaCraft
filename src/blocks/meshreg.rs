@@ -1,7 +1,7 @@
 use crate::blocks::*;
 
 #[derive(Resource, Clone)]
-pub struct BlockRegistry {
+pub struct MeshRegistry {
     dirt_mesh: Mesh,
     grass_mesh: Mesh,
     stone_mesh: Mesh,
@@ -9,7 +9,7 @@ pub struct BlockRegistry {
     sand_mesh: Mesh,
 }
 
-impl VoxelRegistry for BlockRegistry {
+impl VoxelRegistry for MeshRegistry {
     type Voxel = Block;
     fn get_mesh(&self, voxel: &Self::Voxel) -> VoxelMesh<&Mesh> {
         match voxel {
@@ -44,9 +44,9 @@ impl VoxelRegistry for BlockRegistry {
     }
 }
 
-impl Default for BlockRegistry {
+impl Default for MeshRegistry {
     fn default() -> Self {
-        BlockRegistry {
+        MeshRegistry {
             sand_mesh: generate_voxel_mesh(
                 VOXEL_DIMS,
                 TEXTURE_ATLAS_DIMS,
@@ -119,7 +119,7 @@ impl Default for BlockRegistry {
                 PADDING,
                 Some(COLOR_INTENSITY),
                 ALPHA,
-                GREENERY_SCALE,
+                XSPRITE_SCALE,
             ),
         }
     }

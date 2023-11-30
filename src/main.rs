@@ -30,6 +30,13 @@ use bevy::{pbr::wireframe::WireframePlugin, window::WindowResolution};
 use bevy_xpbd_3d::prelude::*;
 use prelude::*;
 
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Default, States)]
+pub enum AssetLoadingState {
+    #[default]
+    Loading,
+    Loaded,
+}
+
 fn main() {
     let mut app = App::new();
 

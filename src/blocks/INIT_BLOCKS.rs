@@ -1,5 +1,6 @@
 use super::block_descriptor::*;
 use super::properties::*;
+use crate::AssetLoadingState;
 use novacraft_derive::InitBlocks;
 
 #[allow(non_snake_case, non_camel_case_types)]
@@ -12,6 +13,7 @@ pub enum BLOCKS_INITIALIZER {
         perceptible: PerceptibleProperty,
         dynamic: DynamicProperty,
     },
+    #[custom_mesh(path = "Hi")]
     Dirt(BlockDescriptor),
     Grass(BlockDescriptor),
     Stone(BlockDescriptor),

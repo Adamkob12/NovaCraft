@@ -7,8 +7,8 @@ use crate::chunk::{ChunkChild, CubeChunk, XSpriteChunk};
 use crate::prelude::notical;
 use crate::utils::to_global_pos;
 
-use super::blockreg::BlockRegistry;
 use super::existence_conditions::ExistenceConditionSolverData;
+use super::meshreg::MeshRegistry;
 use super::properties::DynamicProperty;
 use super::*;
 
@@ -128,7 +128,7 @@ pub fn global_block_placer(
     mut world_block_update_sender: EventWriter<WorldBlockUpdate>,
     mut break_block_global_sender: EventWriter<BreakBlockGlobalEvent>,
     mut commands: Commands,
-    breg: Res<BlockRegistry>,
+    breg: Res<MeshRegistry>,
     chunk_map: Res<ChunkMap>,
     parent_chunks: Query<(&Grid, &Children), With<Chunk>>,
     chunk_metadata: Query<(&CMMD, Has<CubeChunk>, Has<XSpriteChunk>)>,

@@ -1,8 +1,8 @@
 use crate::action::properties::DynamicProperty;
 use crate::action::{BreakBlockGlobalEvent, PlaceBlockGlobalEvent};
 use crate::blocks::{
-    blockreg::BlockRegistry,
     existence_conditions::*,
+    meshreg::MeshRegistry,
     properties::{PassiveProperty, PhysicalProperty},
     BlockPropertyRegistry, WorldBlockUpdate,
 };
@@ -31,7 +31,7 @@ pub fn handle_block_updates(
     passive_preg: Res<BlockPropertyRegistry<PassiveProperty>>,
     physical_preg: Res<BlockPropertyRegistry<PhysicalProperty>>,
     dyn_preg: Res<BlockPropertyRegistry<DynamicProperty>>,
-    breg: Res<BlockRegistry>,
+    breg: Res<MeshRegistry>,
     grids: Query<(&Grid, &MainChild, &XSpriteChild), With<Chunk>>,
     main_mat: Res<BlockMaterial>,
     xsprite_mat: Res<XSpriteMaterial>,

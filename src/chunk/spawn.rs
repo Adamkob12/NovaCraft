@@ -1,7 +1,7 @@
 #[allow(unused_imports)]
 use bevy::pbr::wireframe::Wireframe;
 
-use crate::{blocks::blockreg::BlockRegistry, utils::chunk_distance};
+use crate::{blocks::meshreg::MeshRegistry, utils::chunk_distance};
 
 use super::{
     chunk_queue::ChunkQueue,
@@ -43,7 +43,7 @@ pub fn queue_spawn_despawn_chunks(
 pub fn dequeue_all_chunks(
     commands: Commands,
     mut chunk_map: ResMut<ChunkMap>,
-    breg: Res<BlockRegistry>,
+    breg: Res<MeshRegistry>,
     mut chunk_queue: ResMut<ChunkQueue>,
     current_chunk: Res<CurrentChunk>,
     render_settings: Res<RenderSettings>,

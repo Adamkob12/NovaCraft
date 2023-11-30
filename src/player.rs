@@ -7,7 +7,7 @@ use std::f32::consts::PI;
 use crate::chunk::{
     ChunkCords, ComputeChunk, CurrentChunk, CHUNK_DIMS, HEIGHT, LENGTH, RENDER_DISTANCE, WIDTH,
 };
-use crate::prelude::*;
+use crate::{prelude::*, AssetLoadingState};
 use bevy::ecs::event::ManualEventReader;
 use bevy::input::mouse::MouseMotion;
 use bevy::window::{CursorGrabMode, PrimaryWindow};
@@ -238,7 +238,8 @@ impl Plugin for PlayerPlugin {
                 setup_player.run_if(
                     not(any_with_component::<ComputeChunk>())
                         .and_then(not(any_with_component::<PlayerCamera>()))
-                        .and_then(any_with_component::<Collider>()),
+                        .and_then(any_with_component::<Collider>())
+                        .and_then(in_state::<AssetLoadingState>(AssetLoadingState::Loaded)),
                 ),
             )
             .add_systems(
