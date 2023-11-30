@@ -35,7 +35,7 @@ pub enum PerceptibleProperty {
 }
 
 pub enum DynamicProperty {
-    BlockAbove(BlockTransformation),
+    BlockTransformIf(ExistenceCondition, BlockTransformation),
     ExistenceCondition(ExistenceCondition),
 }
 

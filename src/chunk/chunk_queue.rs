@@ -1,7 +1,6 @@
 use super::{ChunkCords, ChunkMap, RenderSettings, CHUNK_TOTAL_BLOCKS};
-use crate::blocks::blockreg::BlockRegistry;
+use crate::blocks::meshreg::MeshRegistry;
 use crate::chunk::{Block, CHUNK_DIMS};
-use crate::mesh_utils::xsprite_mesh::*;
 use crate::prelude::*;
 use crate::terrain::{generate_chunk, TerrainConfig};
 use bevy::tasks::{AsyncComputeTaskPool, Task};
@@ -24,7 +23,7 @@ pub struct ComputeChunk(
             (Mesh, MeshMD<Block>),
             [Block; CHUNK_TOTAL_BLOCKS],
             [i32; 2],
-            (Mesh, XSpriteMetaData),
+            (Mesh, XSpriteMetaData<Block>),
         )>,
     >,
 );
@@ -43,7 +42,7 @@ impl ChunkQueue {
         &mut self,
         chunk_map: &mut ChunkMap,
         mut commands: Commands,
-        breg: &Arc<BlockRegistry>,
+        breg: &Arc<MeshRegistry>,
         condition: Option<F>,
         render_settings: &RenderSettings,
         terrain_config: &TerrainConfig,

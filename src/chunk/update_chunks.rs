@@ -3,13 +3,13 @@ use parry3d::shape::TriMeshFlags;
 
 use super::{chunkmd::*, *};
 use crate::{
-    action::blockreg::BlockRegistry, mesh_utils::xsprite_mesh::update_xsprite_mesh, prelude::*,
+    action::meshreg::MeshRegistry, mesh_utils::xsprite_mesh::update_xsprite_mesh, prelude::*,
 };
 
 pub(super) fn update_cube_chunks(
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
-    breg: Res<BlockRegistry>,
+    breg: Res<MeshRegistry>,
     mut chunks_to_update: Query<(Entity, &CMMD, &Handle<Mesh>), (With<ToUpdate>, With<CubeChunk>)>,
 ) {
     let breg = Arc::new(breg.into_inner().clone());
@@ -36,7 +36,7 @@ pub(super) fn update_cube_chunks(
 pub(super) fn update_xsprite_chunks(
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
-    breg: Res<BlockRegistry>,
+    breg: Res<MeshRegistry>,
     chunks_to_update: Query<(Entity, &CMMD, &Handle<Mesh>), (With<ToUpdate>, With<XSpriteChunk>)>,
 ) {
     let breg = Arc::new(breg.into_inner().clone());
@@ -45,7 +45,7 @@ pub(super) fn update_xsprite_chunks(
         let ChunkMD::XSpriteMD(metadata) = &mut *metadata.0.write().unwrap() else {
             continue;
         };
-        update_xsprite_mesh(Arc::clone(&breg).as_ref(), mesh, metadata);
+        update_xsprite_mesh(Arc::clone(&breg).as_ref(), mesh, metadata, CHUNK_DIMS);
         if let Some(aabb) = mesh.compute_aabb() {
             if let Some(mut comm) = commands.get_entity(entity) {
                 comm.insert(aabb)

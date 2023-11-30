@@ -1,22 +1,20 @@
-use crate::{
-    action::VOXEL_DIMS,
-    blocks::Block,
-    chunk::{XSpriteVIVI, CHUNK_TOTAL_BLOCKS},
-    prelude::*,
-};
+use crate::prelude::*;
+use bevy::prelude::*;
+use bevy::render::mesh::{Indices, VertexAttributeValues};
+use bevy::render::render_resource::PrimitiveTopology;
 
-use super::CHUNK_DIMS;
+pub type XSpriteVIVI = Vec<(usize, usize, u32, u32)>;
 
-pub struct XSpriteMetaData {
+pub struct XSpriteMetaData<T> {
     pub vivi: XSpriteVIVI,
-    pub log: Vec<(VoxelChange, Block, usize)>,
+    pub log: Vec<(VoxelChange, T, usize)>,
 }
 
-pub fn meshify_xsprite_voxels(
+pub fn meshify_xsprite_voxels<Block>(
     reg: &impl VoxelRegistry<Voxel = Block>,
     grid: &[Block],
     dims: Dimensions,
-) -> (Mesh, XSpriteMetaData) {
+) -> (Mesh, XSpriteMetaData<Block>) {
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
 
     let mut indices: Vec<u32> = vec![];
@@ -26,7 +24,7 @@ pub fn meshify_xsprite_voxels(
     let mut normals: Vec<[f32; 3]> = vec![];
 
     // data structure similar to VIVI, to map voxel index
-    let mut data_structure = [(usize::MIN, usize::MIN, u32::MIN, u32::MIN); CHUNK_TOTAL_BLOCKS];
+    let mut data_structure = vec![(usize::MIN, usize::MIN, u32::MIN, u32::MIN); grid.len()];
 
     let width = dims.0;
     let length = dims.2;
@@ -38,14 +36,14 @@ pub fn meshify_xsprite_voxels(
         for j in 0..length {
             for i in 0..width {
                 let cord = k * length * width + j * width + i;
-                let block = grid[cord];
+                let block = &grid[cord];
                 let position_offset = (
                     i as f32 * voxel_dims[0],
                     k as f32 * voxel_dims[1],
                     j as f32 * voxel_dims[2],
                 );
 
-                if let VoxelMesh::CustomMesh(custom_mesh) = reg.get_mesh(&block) {
+                if let VoxelMesh::XSprite(custom_mesh) = reg.get_mesh(&block) {
                     let pos_attribute = custom_mesh
                         .attribute(Mesh::ATTRIBUTE_POSITION)
                         .expect("couldn't get voxel mesh data");
@@ -121,16 +119,22 @@ pub fn meshify_xsprite_voxels(
     )
 }
 
-pub fn update_xsprite_mesh(
-    reg: &impl VoxelRegistry<Voxel = Block>,
+pub fn update_xsprite_mesh<T>(
+    reg: &impl VoxelRegistry<Voxel = T>,
     mesh: &mut Mesh,
-    md: &mut XSpriteMetaData,
+    md: &mut XSpriteMetaData<T>,
+    dims: Dimensions,
 ) {
     for (change, block, index) in md.log.iter() {
         match change {
-            VoxelChange::Added => {
-                add_xsprite_voxel(mesh, &mut md.vivi, *index, reg.get_mesh(block).unwrap())
-            }
+            VoxelChange::Added => add_xsprite_voxel(
+                mesh,
+                &mut md.vivi,
+                *index,
+                reg.get_mesh(block).unwrap(),
+                reg.get_voxel_dimensions(),
+                dims,
+            ),
             VoxelChange::Broken => {
                 remove_xsprite_voxel(mesh, &mut md.vivi, *index);
             }
@@ -169,13 +173,20 @@ fn remove_xsprite_voxel(mesh: &mut Mesh, md: &mut XSpriteVIVI, index: usize) {
     }
 }
 
-fn add_xsprite_voxel(mesh: &mut Mesh, md: &mut XSpriteVIVI, index: usize, voxel_mesh: &Mesh) {
+fn add_xsprite_voxel(
+    mesh: &mut Mesh,
+    md: &mut XSpriteVIVI,
+    index: usize,
+    voxel_mesh: &Mesh,
+    voxel_dims: [f32; 3],
+    dims: Dimensions,
+) {
     let ver_count = mesh.count_vertices();
-    if let Some([i, k, j]) = three_d_cords_arr_safe(index, CHUNK_DIMS) {
+    if let Some([i, k, j]) = three_d_cords_arr_safe(index, dims) {
         let position_offset = (
-            i as f32 * VOXEL_DIMS[0],
-            k as f32 * VOXEL_DIMS[1],
-            j as f32 * VOXEL_DIMS[2],
+            i as f32 * voxel_dims[0],
+            k as f32 * voxel_dims[1],
+            j as f32 * voxel_dims[2],
         );
         for (id, vav) in mesh.attributes_mut() {
             if id == Mesh::ATTRIBUTE_POSITION.id {
@@ -207,4 +218,106 @@ fn add_xsprite_voxel(mesh: &mut Mesh, md: &mut XSpriteVIVI, index: usize, voxel_
         }
         md[index] = (ver_count, ver_count2, ind_count as u32, ind_count2 as u32);
     }
+}
+
+pub fn generate_xsprite_mesh(
+    voxel_dims: [f32; 3],
+    texture_atlas_dims: [u32; 2],
+    texture: [u32; 2],
+    voxel_center: [f32; 3],
+    padding: f32,
+    default_color_intensity: Option<f32>,
+    alpha: f32,
+    scale: f32,
+) -> Mesh {
+    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+
+    debug_assert!(
+        0.0 <= scale && scale <= 1.0,
+        "scale parameter in generate_xsprite_mesh needs to be in 0.0 - 1.0 range"
+    );
+
+    let scale = (scale.min(1.0)).max(0.0);
+
+    let z = voxel_center[2] + voxel_dims[2] / 2.0 * scale;
+    let nz = voxel_center[2] - voxel_dims[2] / 2.0 * scale;
+    let x = voxel_center[0] + voxel_dims[0] / 2.0 * scale;
+    let nx = voxel_center[0] - voxel_dims[0] / 2.0 * scale;
+    let y = voxel_center[1] + voxel_dims[1] / 2.0;
+    let ny = voxel_center[1] - voxel_dims[1] / 2.0;
+
+    let u: f32 = 1.0 / (texture_atlas_dims[0] as f32);
+    let v: f32 = 1.0 / (texture_atlas_dims[1] as f32);
+
+    let padding_u = padding / (texture_atlas_dims[0] as f32);
+    let padding_v = padding / (texture_atlas_dims[1] as f32);
+
+    let uvs_tl: [f32; 2] = [
+        texture[0] as f32 * u + padding_u,
+        texture[1] as f32 * v + padding_v,
+    ];
+    let uvs_br: [f32; 2] = [
+        (texture[0] + 1) as f32 * u - padding_u,
+        (texture[1] + 1) as f32 * v - padding_v,
+    ];
+
+    // Two quads, in the shape of an X, like in Minecraft. This is used for flowers or grass eg.
+    #[rustfmt::skip]
+    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, 
+        vec![
+            // First sprite
+            [nx, y, z],
+            [x, y, nz],
+            [x, ny, nz],
+            [nx, ny, z],
+            // Second sprite
+            [nx, y, nz],
+            [x, y, z],
+            [x, ny, z],
+            [nx, ny, nz],
+        ]
+    );
+
+    #[rustfmt::skip]
+    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, 
+        vec![
+            uvs_tl, [uvs_br[0], uvs_tl[1]] ,uvs_br, [uvs_tl[0], uvs_br[1]], 
+            uvs_tl, [uvs_br[0], uvs_tl[1]] ,uvs_br, [uvs_tl[0], uvs_br[1]], 
+        ]
+    );
+
+    if let Some(color) = default_color_intensity {
+        #[rustfmt::skip]
+        mesh.insert_attribute(
+            Mesh::ATTRIBUTE_COLOR,
+            vec![
+                [color, color, color, alpha],
+                [color, color, color, alpha],
+                [color, color, color, alpha],
+                [color, color, color, alpha],
+                [color, color, color, alpha],
+                [color, color, color, alpha],
+                [color, color, color, alpha],
+                [color, color, color, alpha],
+            ]
+        );
+    }
+
+    mesh.insert_attribute(
+        Mesh::ATTRIBUTE_NORMAL,
+        vec![
+            [0.8, 0.0, 0.8],
+            [0.8, 0.0, 0.8],
+            [0.8, 0.0, 0.8],
+            [0.8, 0.0, 0.8],
+            [-0.8, 0.0, 0.8],
+            [-0.8, 0.0, 0.8],
+            [-0.8, 0.0, 0.8],
+            [-0.8, 0.0, 0.8],
+        ],
+    );
+
+    mesh.set_indices(Some(Indices::U32(vec![0, 1, 3, 2, 3, 1, 4, 5, 7, 6, 7, 5])));
+
+    mesh
 }

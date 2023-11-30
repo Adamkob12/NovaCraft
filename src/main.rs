@@ -17,7 +17,9 @@ pub mod console;
 pub mod env;
 pub mod helper_ecs_utils;
 pub mod inventory;
-pub mod mesh_utils;
+pub mod mesh_utils {
+    pub use novacraft_meshing_backend::mesh_utils::*;
+}
 pub mod player;
 pub mod terrain;
 pub mod utils;
@@ -27,6 +29,13 @@ pub mod visuals;
 use bevy::{pbr::wireframe::WireframePlugin, window::WindowResolution};
 use bevy_xpbd_3d::prelude::*;
 use prelude::*;
+
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Default, States)]
+pub enum AssetLoadingState {
+    #[default]
+    Loading,
+    Loaded,
+}
 
 fn main() {
     let mut app = App::new();

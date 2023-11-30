@@ -1,5 +1,5 @@
 use super::{chunkmd::CMMD, *};
-use crate::blocks::blockreg::BlockRegistry;
+use crate::blocks::MeshRegistry;
 
 // "Introduce" means cull the sides between the chunks (the intersection). And apply Smooth
 // Lighting if needed.
@@ -8,7 +8,7 @@ pub(super) fn introduce_neighboring_chunks(
     mut meshes: ResMut<Assets<Mesh>>,
     mesh_query: Query<(&Handle<Mesh>, &CMMD)>,
     mut to_introduce_query: Query<(Entity, &Children, &mut ToIntroduce, &AdjChunkGrids)>,
-    breg: Res<BlockRegistry>,
+    breg: Res<MeshRegistry>,
 ) {
     let mut rng = rand::thread_rng();
     let breg = Arc::new(breg.into_inner().to_owned());
