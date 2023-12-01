@@ -10,20 +10,25 @@ use bevy_xpbd_3d::prelude::*;
 
 pub fn follow_falling_block(
     mut commands: Commands,
-    falling_blocks: Query<(Entity, &ShapeHits, &Block, &Transform), With<FallingBlock>>,
+    falling_blocks: Query<(Entity, &ShapeHits, &Block, &Transform, &FallingBlock)>,
     mut global_block_place_event_sender: EventWriter<PlaceBlockGlobalEvent>,
 ) {
-    for (entity, hits, block, transform) in falling_blocks.iter() {
+    for (entity, hits, block, transform, FallingBlock { origin }) in falling_blocks.iter() {
         if !hits.is_empty() {
-            commands.entity(entity).despawn();
             let (chunk_pos, block_index, flag) =
                 position_to_chunk_position(transform.translation + Vec3::Y * 0.1, CHUNK_DIMS);
-            if flag {
+            let block_index = one_d_cords(block_index, CHUNK_DIMS);
+            if flag && block_index != *origin {
+                info!(
+                    "Falling block collision, at chunk: {:?} at position: {}, by block: {:?}",
+                    chunk_pos, transform.translation, *block
+                );
                 global_block_place_event_sender.send(PlaceBlockGlobalEvent {
                     block: *block,
                     chunk_pos,
-                    block_index: one_d_cords(block_index, CHUNK_DIMS),
-                })
+                    block_index,
+                });
+                commands.entity(entity).despawn();
             }
         }
     }
@@ -38,6 +43,7 @@ pub(super) fn spawn_falling_block(
     density: f32,
     block: Block,
 ) {
+    info!("Spawned falling block: {:?}", block);
     let mut collider = Collider::cuboid(0.98, 0.98, 0.98);
     collider.set_scale(Vec3::ONE * 0.99, 10);
     let mut caster_shape = collider.clone();
@@ -77,5 +83,5 @@ pub(super) fn spawn_falling_block(
         )
         .insert(collider)
         .insert(block)
-        .insert(FallingBlock);
+        .insert(FallingBlock { origin: index });
 }

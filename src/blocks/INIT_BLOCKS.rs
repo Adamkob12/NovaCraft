@@ -3,13 +3,7 @@ use super::properties::*;
 use crate::AssetLoadingState;
 use novacraft_derive::InitBlocks;
 
-#[allow(
-    non_snake_case,
-    non_camel_case_types,
-    dead_code,
-    unused,
-    unreachable_patterns
-)]
+#[allow(non_snake_case, non_camel_case_types)]
 #[derive(InitBlocks)]
 pub enum BLOCKS_INITIALIZER {
     Air {
