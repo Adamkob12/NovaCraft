@@ -1,11 +1,12 @@
 use crate::player::PlayerCamera;
 
-use bevy::{ecs::query::Has, prelude::*};
+use bevy::{ecs::query::Has, prelude::*, utils::Instant};
 use bevy_xpbd_3d::{math::*, prelude::*};
 
-use super::{CAMERA_HEIGHT_OFFSET, FOV};
+use super::{LastPressedKeys, PhysicalPlayer, PlayerGameMode, CAMERA_HEIGHT_OFFSET, FOV};
 
 pub const SPEED: f32 = 500.0;
+const DOUBLE_CLICK_MAX_SEP_TIME: f32 = 0.5;
 
 pub struct CharacterControllerPlugin;
 
@@ -30,6 +31,23 @@ impl Plugin for CharacterControllerPlugin {
 pub enum MovementAction {
     Move(Vec3),
     Jump,
+}
+
+#[derive(Component)]
+pub struct FlyMode(bool);
+
+impl FlyMode {
+    pub fn off() -> Self {
+        Self(false)
+    }
+
+    pub fn on() -> Self {
+        Self(true)
+    }
+
+    pub fn toggle(&mut self) {
+        self.0 = !self.0
+    }
 }
 
 /// A marker component indicating that an entity is using a character controller.
@@ -144,6 +162,9 @@ fn keyboard_input(
     keyboard_input: Res<Input<KeyCode>>,
     mut camera_query: Query<(&mut Projection, &mut Transform), With<PlayerCamera>>,
     mut speed_query: Query<&mut Speed>,
+    mut physical_player: Query<&mut FlyMode, With<PhysicalPlayer>>,
+    player_game_mode: Query<&PlayerGameMode>,
+    mut press_history: ResMut<LastPressedKeys>,
 ) {
     let up = keyboard_input.any_pressed([KeyCode::W, KeyCode::Up]);
     let down = keyboard_input.any_pressed([KeyCode::S, KeyCode::Down]);
@@ -165,6 +186,17 @@ fn keyboard_input(
 
     if keyboard_input.pressed(KeyCode::Space) {
         movement_event_writer.send(MovementAction::Jump);
+
+        if player_game_mode.get_single().unwrap().can_fly() {
+            if let Some(last_press) = press_history.map.get(&KeyCode::Space) {
+                if last_press.elapsed().as_secs_f32() <= DOUBLE_CLICK_MAX_SEP_TIME {
+                    physical_player
+                        .iter_mut()
+                        .for_each(|mut flymode| flymode.toggle());
+                }
+                press_history.map.insert(KeyCode::Space, Instant::now());
+            }
+        }
     }
 
     if keyboard_input.just_pressed(KeyCode::ShiftLeft) {

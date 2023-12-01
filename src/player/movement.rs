@@ -1,3 +1,5 @@
+use bevy::utils::{hashbrown::HashMap, Instant};
+
 use super::*;
 use crate::prelude::*;
 
@@ -32,4 +34,9 @@ pub(super) fn player_look(
     } else {
         warn!("Primary window not found for `player_look`!");
     }
+}
+
+#[derive(Resource, Default)]
+pub struct LastPressedKeys {
+    pub map: HashMap<KeyCode, Instant>,
 }

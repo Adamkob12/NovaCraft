@@ -40,6 +40,20 @@ struct InputState {
 #[derive(Component)]
 pub struct PhysicalPlayer;
 
+#[derive(Component)]
+pub enum PlayerGameMode {
+    Creative,
+    Spectator,
+}
+
+impl PlayerGameMode {
+    pub fn can_fly(&self) -> bool {
+        match self {
+            Self::Creative | Self::Spectator => true,
+        }
+    }
+}
+
 #[derive(Resource)]
 pub struct TargetBlock {
     pub ignore_flag: bool,
@@ -104,6 +118,8 @@ pub(super) fn setup_player(mut commands: Commands) {
             ..Default::default()
         })
         .insert(PlayerCamera)
+        .insert(FlyMode::off())
+        .insert(PlayerGameMode::Creative)
         .insert(AtmosphereCamera::default())
         .insert(TemporalAntiAliasBundle::default())
         .insert(ScreenSpaceAmbientOcclusionBundle {
@@ -231,6 +247,7 @@ impl Plugin for PlayerPlugin {
             .init_resource::<InputState>()
             .init_resource::<MovementSettings>()
             .init_resource::<TargetBlock>()
+            .init_resource::<LastPressedKeys>()
             .insert_resource(CurrentChunk([0, 0]))
             .add_systems(Startup, initial_grab_cursor)
             .add_systems(
