@@ -6,6 +6,8 @@
 assets/*.xcf
 /target
 Cargo.lock
+crates/*/target
+crates/*/Cargo.lock
 # Created by https://www.toptal.com/developers/gitignore/api/rust,macos,windows,linux,vscode,intellij+all
 # Edit at https://www.toptal.com/developers/gitignore?templates=rust,macos,windows,linux,vscode,intellij+all
 
