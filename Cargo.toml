@@ -13,6 +13,7 @@ bevy = "0.12"
 bevy_console = { git = "https://github.com/msklosak/bevy-console.git", rev = "c1b5901ca7c6e9da2e2fb39fbbf8b97deb5466f5" }
 novacraft_meshing_backend = { path = "crates/novacraft_meshing_backend/" }
 novacraft_derive = { path = "crates/novacraft_derive" }
+novacraft_utils = { path = "crates/novacraft_utils" }
 clap = "4.4.7"
 futures-lite = "1.13.0"
 noise = "0.8.2"
