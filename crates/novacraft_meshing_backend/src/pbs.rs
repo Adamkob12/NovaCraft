@@ -228,7 +228,7 @@ pub fn apply_smooth_lighting_with_connected_chunks<'a, T: Copy, const N: usize>(
                                 None => {
                                     continue;
                                 }
-                                Some((dir, neighbor_index)) => {
+                                Some((dir, neighbor_block_pos)) => {
                                     let final_dir = crate::prelude::util::Direction::add_direction(
                                         chunk_dir, dir,
                                     );
@@ -236,7 +236,7 @@ pub fn apply_smooth_lighting_with_connected_chunks<'a, T: Copy, const N: usize>(
                                     surrounding_blocks[cage_index] = match final_dir {
                                         None => covering_multiple_faces(
                                             reg,
-                                            &this_chunk.get_block(neighbor_index).unwrap(),
+                                            &this_chunk.get_block(neighbor_block_pos).unwrap(),
                                             faces,
                                         ),
                                         Some(North) if north_chunk.is_some() => {
@@ -244,7 +244,7 @@ pub fn apply_smooth_lighting_with_connected_chunks<'a, T: Copy, const N: usize>(
                                                 reg,
                                                 &north_chunk
                                                     .unwrap()
-                                                    .get_block(neighbor_index)
+                                                    .get_block(neighbor_block_pos)
                                                     .unwrap(),
                                                 faces,
                                             )
@@ -254,7 +254,7 @@ pub fn apply_smooth_lighting_with_connected_chunks<'a, T: Copy, const N: usize>(
                                                 reg,
                                                 &south_chunk
                                                     .unwrap()
-                                                    .get_block(neighbor_index)
+                                                    .get_block(neighbor_block_pos)
                                                     .unwrap(),
                                                 faces,
                                             )
@@ -264,7 +264,7 @@ pub fn apply_smooth_lighting_with_connected_chunks<'a, T: Copy, const N: usize>(
                                                 reg,
                                                 &east_chunk
                                                     .unwrap()
-                                                    .get_block(neighbor_index)
+                                                    .get_block(neighbor_block_pos)
                                                     .unwrap(),
                                                 faces,
                                             )
@@ -274,7 +274,7 @@ pub fn apply_smooth_lighting_with_connected_chunks<'a, T: Copy, const N: usize>(
                                                 reg,
                                                 &west_chunk
                                                     .unwrap()
-                                                    .get_block(neighbor_index)
+                                                    .get_block(neighbor_block_pos)
                                                     .unwrap(),
                                                 faces,
                                             )
@@ -284,7 +284,7 @@ pub fn apply_smooth_lighting_with_connected_chunks<'a, T: Copy, const N: usize>(
                                                 reg,
                                                 &no_east_chunk
                                                     .unwrap()
-                                                    .get_block(neighbor_index)
+                                                    .get_block(neighbor_block_pos)
                                                     .unwrap(),
                                                 faces,
                                             )
@@ -294,7 +294,7 @@ pub fn apply_smooth_lighting_with_connected_chunks<'a, T: Copy, const N: usize>(
                                                 reg,
                                                 &no_west_chunk
                                                     .unwrap()
-                                                    .get_block(neighbor_index)
+                                                    .get_block(neighbor_block_pos)
                                                     .unwrap(),
                                                 faces,
                                             )
@@ -304,7 +304,7 @@ pub fn apply_smooth_lighting_with_connected_chunks<'a, T: Copy, const N: usize>(
                                                 reg,
                                                 &so_east_chunk
                                                     .unwrap()
-                                                    .get_block(neighbor_index)
+                                                    .get_block(neighbor_block_pos)
                                                     .unwrap(),
                                                 faces,
                                             )
@@ -314,7 +314,7 @@ pub fn apply_smooth_lighting_with_connected_chunks<'a, T: Copy, const N: usize>(
                                                 reg,
                                                 &so_west_chunk
                                                     .unwrap()
-                                                    .get_block(neighbor_index)
+                                                    .get_block(neighbor_block_pos)
                                                     .unwrap(),
                                                 faces,
                                             )
