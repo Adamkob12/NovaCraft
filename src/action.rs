@@ -1,11 +1,10 @@
 pub use crate::blocks::*;
-use crate::chunk::{
+pub use crate::chunk::{
     block_update::handle_block_updates, follow_falling_block, ChunkCords, CHUNK_DIMS,
 };
 use crate::inventory::Inventory;
 pub use crate::player::*;
 pub use crate::prelude::*;
-use crate::utils::adj_blocks;
 
 mod action_utils;
 mod break_blocks;
@@ -119,8 +118,8 @@ fn sort_actions(
         {
             break_block_global_sender.send(BreakBlockGlobalEvent {
                 chunk_entity: Some(target_block.target_entity),
-                chunk_pos: None,
-                block_index: target_block.block_index,
+                chunk_cords: None,
+                block_pos: target_block.block_pos,
             });
         }
     }
@@ -134,7 +133,7 @@ fn sort_actions(
             if let Some(block) = inv.get_current() {
                 place_block_writer.send(BlockPlaceEvent(
                     target_block.target_entity,
-                    target_block.block_index,
+                    target_block.block_pos,
                     target_block.face_hit.unwrap(),
                     block,
                 ));
@@ -144,21 +143,19 @@ fn sort_actions(
 }
 
 pub fn send_world_updates_surrounding_blocks(
-    block_index: usize,
-    chunk_pos: ChunkCords,
+    block_pos: BlockPos,
+    chunk_cords: ChunkCords,
     world_block_update_sender: &mut EventWriter<WorldBlockUpdate>,
     block_update: BlockUpdate,
 ) {
-    for (adj_block_index, adj_block_chunk) in adj_blocks(block_index, chunk_pos, CHUNK_DIMS) {
-        world_block_update_sender.send(WorldBlockUpdate {
-            block_index: adj_block_index,
-            chunk_pos: adj_block_chunk,
-            block_update: None,
-        });
+    let global_pos = BlockGlobalPos::new(block_pos, chunk_cords);
+    for (_face, neighbor_global_pos) in global_enumerate_neighboring_blocks(global_pos, CHUNK_DIMS)
+    {
+        world_block_update_sender.send(WorldBlockUpdate::from_global_pos(neighbor_global_pos));
     }
     world_block_update_sender.send(WorldBlockUpdate {
-        block_index,
-        chunk_pos,
+        block_pos,
+        chunk_cords,
         block_update: Some(block_update),
     });
 }

@@ -11,18 +11,19 @@ pub fn update_mesh<T: std::fmt::Debug>(
     let mut min = usize::MAX;
     let mut max = usize::MIN;
     let voxel_dims = reg.get_voxel_dimensions();
-    for (voxel, index, change, neighbors) in metadata.changed_voxels.iter() {
-        if *index < min {
-            min = *index;
+    for (voxel, block_pos, change, neighbors) in metadata.changed_voxels.iter() {
+        let block_index = pos_to_index(*block_pos, metadata.dims).unwrap();
+        if block_index < min {
+            min = block_index;
         }
-        if *index > max {
-            max = *index;
+        if block_index > max {
+            max = block_index;
         }
-        let temp = three_d_cords(*index, metadata.dims);
+        let temp = index_to_pos(block_index, metadata.dims).unwrap();
         let position_offset = (
-            temp.0 as f32 * voxel_dims[0],
-            temp.1 as f32 * voxel_dims[1],
-            temp.2 as f32 * voxel_dims[2],
+            temp.x as f32 * voxel_dims[0],
+            temp.y as f32 * voxel_dims[1],
+            temp.z as f32 * voxel_dims[2],
         );
         let neig: Neighbors = match change {
             VoxelChange::AddFaces => neighbors
@@ -77,25 +78,31 @@ pub fn update_mesh<T: std::fmt::Debug>(
         match *change {
             VoxelChange::Added => {
                 if let VoxelMesh::NormalCube(voxel_mesh) = reg.get_mesh(voxel) {
-                    remove_voxel(mesh, &mut metadata.vivi, *index, [true; 6]);
+                    remove_voxel(mesh, &mut metadata.vivi, block_index, [true; 6]);
                     add_voxel_after_gen(
                         neig,
                         mesh,
                         voxel_mesh,
                         &mut metadata.vivi,
-                        *index,
+                        block_index,
                         reg.get_center(),
                         position_offset,
                     );
-                    remove_quads_facing(mesh, &mut metadata.vivi, *index, metadata.dims, covering);
+                    remove_quads_facing(
+                        mesh,
+                        &mut metadata.vivi,
+                        block_index,
+                        metadata.dims,
+                        covering,
+                    );
                 }
             }
             VoxelChange::Broken => {
-                remove_voxel(mesh, &mut metadata.vivi, *index, [true; 6]);
+                remove_voxel(mesh, &mut metadata.vivi, block_index, [true; 6]);
                 add_quads_facing(
                     mesh,
                     &mut metadata.vivi,
-                    *index,
+                    block_index,
                     neighboring_voxels,
                     reg.get_center(),
                     reg.get_voxel_dimensions(),
@@ -106,7 +113,7 @@ pub fn update_mesh<T: std::fmt::Debug>(
                 remove_voxel(
                     mesh,
                     &mut metadata.vivi,
-                    *index,
+                    block_index,
                     neighbors
                         .iter()
                         .map(|x| x.is_some())
@@ -122,7 +129,7 @@ pub fn update_mesh<T: std::fmt::Debug>(
                         mesh,
                         voxel_mesh,
                         &mut metadata.vivi,
-                        *index,
+                        block_index,
                         reg.get_center(),
                         position_offset,
                     );
@@ -158,7 +165,7 @@ fn remove_quads_facing(
     let mut quad_to_remove: Neighbors;
     for i in 0..6 {
         let face = Face::from(i as usize);
-        let n = match get_neighbor(voxel_index, face, dims) {
+        let n = match neighbor_index(index_to_pos(voxel_index, dims).unwrap(), face, dims) {
             None => continue,
             Some(i) => i,
         };
@@ -219,7 +226,7 @@ fn remove_voxel(mesh: &mut Mesh, vivi: &mut VIVI, voxel_index: usize, neig: Neig
 pub(crate) fn add_quads_facing(
     mesh: &mut Mesh,
     vivi: &mut VIVI,
-    voxel_index: usize,
+    voxel_index: BlockIndex,
     neighboring_voxels: Vec<(Face, &Mesh)>,
     center: [f32; 3],
     voxel_dims: [f32; 3],
@@ -229,17 +236,20 @@ pub(crate) fn add_quads_facing(
     for &(face, vmesh) in neighboring_voxels.iter() {
         neig = [false; 6];
         neig[face.opposite() as usize] = true;
-        let i = match get_neighbor(voxel_index, face, dims) {
+        let neig_pos = match neighbor_pos(index_to_pos(voxel_index, dims).unwrap(), face, dims) {
             None => continue,
             Some(j) => j,
         };
-        let temp = three_d_cords(i, dims);
-        let position_offset = (
-            temp.0 as f32 * voxel_dims[0],
-            temp.1 as f32 * voxel_dims[1],
-            temp.2 as f32 * voxel_dims[2],
-        );
-        add_voxel_after_gen(neig, mesh, vmesh, vivi, i, center, position_offset)
+        let position_offset = (Vec3::from(voxel_dims) * neig_pos.as_vec3()).into();
+        add_voxel_after_gen(
+            neig,
+            mesh,
+            vmesh,
+            vivi,
+            pos_to_index(neig_pos, dims).unwrap(),
+            center,
+            position_offset,
+        )
     }
 }
 
@@ -291,6 +301,7 @@ fn add_voxel_after_gen(
     // part of one quad, we sort them this way to efficiently update the vivi.
     let mut final_vertices: Vec<u32> = vec![];
 
+    use Face::*;
     // iterate over all the triangles in the mesh
     for (a, b, c) in triangles {
         let v1 = positions[a as usize];

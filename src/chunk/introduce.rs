@@ -44,7 +44,7 @@ pub(super) fn introduce_neighboring_chunks(
                                         .extract_meshmd_mut()
                                         .unwrap(),
                                     (*direction).into(),
-                                    adj_grid.read().expect("b").as_ref(),
+                                    &adj_grid.read().expect("b"),
                                 );
                             }
                             _ => {}

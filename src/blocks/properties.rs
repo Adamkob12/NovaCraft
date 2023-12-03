@@ -16,7 +16,7 @@ pub enum PROPERTY_INITIALIZER {
 
 #[derive(Component)]
 pub struct FallingBlock {
-    pub origin: usize,
+    pub origin: BlockPos,
 }
 
 #[derive(Clone, Copy, PartialEq)]

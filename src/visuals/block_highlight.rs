@@ -9,10 +9,8 @@ pub(super) fn highlight_target_block(target_block: Res<TargetBlock>, mut gizmos:
     if target_block.ignore_flag == true {
         return;
     }
-    // get pos in 3d
-    let tmp = three_d_cords_arr(target_block.block_index, CHUNK_DIMS);
     // convert to Vec3 and offset
-    let tmp = Vec3::new(tmp[0] as f32, tmp[1] as f32, tmp[2] as f32);
+    let tmp = target_block.block_pos.as_vec3();
     // offset the chunk dims
     let block_pos = tmp
         + Vec3::new(

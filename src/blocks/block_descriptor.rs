@@ -2,7 +2,6 @@ use super::properties::{
     BlockProperty, DynamicProperty, PassiveProperty, PerceptibleProperty, PhysicalProperty,
 };
 use super::*;
-use novacraft_meshing_backend::prelude::Face;
 
 pub struct PropertyCollection<T: BlockProperty>(pub Vec<T>);
 
@@ -160,12 +159,12 @@ impl CubeMeshBuilder {
             self.voxel_dims,
             self.texture_atlas_dims,
             [
-                (Top, self.cube_texture_cords.top),
-                (Bottom, self.cube_texture_cords.bottom),
-                (Right, self.cube_texture_cords.right),
-                (Left, self.cube_texture_cords.left),
-                (Back, self.cube_texture_cords.back),
-                (Forward, self.cube_texture_cords.forward),
+                (Face::Top, self.cube_texture_cords.top),
+                (Face::Bottom, self.cube_texture_cords.bottom),
+                (Face::Right, self.cube_texture_cords.right),
+                (Face::Left, self.cube_texture_cords.left),
+                (Face::Back, self.cube_texture_cords.back),
+                (Face::Forward, self.cube_texture_cords.forward),
             ],
             self.voxel_center,
             self.padding,

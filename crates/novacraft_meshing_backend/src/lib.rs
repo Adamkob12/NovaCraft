@@ -1,5 +1,4 @@
 pub(crate) mod adj;
-pub(crate) mod face;
 pub(crate) mod mesh_metadata;
 pub mod mesh_utils;
 pub(crate) mod meshem;
@@ -13,19 +12,17 @@ use bevy::render::mesh::MeshVertexAttribute;
 
 pub mod prelude {
     pub use crate::adj::*;
-    pub use crate::face::Face::*;
-    pub use crate::face::*;
     pub use crate::mesh_metadata::*;
     pub use crate::meshem::*;
     pub use crate::pbs::*;
     pub use crate::update::*;
-    pub(crate) use crate::util::compressed_voxel_grid::*;
     pub use crate::util::vav::*;
     pub use crate::util::*;
     pub use crate::voxel_mesh::*;
     pub use crate::VoxelRegistry;
     pub use crate::*;
     pub use mesh_utils::xsprite_mesh::*;
+    pub(crate) use novacraft_utils::*;
 }
 
 /// Implementing this trait for your own data-structure is the most important
@@ -44,9 +41,6 @@ pub trait VoxelRegistry {
     /// The attributes we are considering while meshing the grid.
     fn all_attributes(&self) -> Vec<MeshVertexAttribute>;
 }
-
-/// (width, height, length) - note that bevy considers the "y position" to be height.
-pub type Dimensions = (usize, usize, usize);
 
 #[derive(Clone)]
 pub enum VoxelMesh<T> {

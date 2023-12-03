@@ -20,7 +20,7 @@ pub fn queue_spawn_despawn_chunks(
     let render_distance = render_settings.render_distance;
     let current_chunk = current_chunk.0;
 
-    let chunks_to_despawn: HashMap<[i32; 2], Entity> = chunk_map
+    let chunks_to_despawn: HashMap<ChunkCords, Entity> = chunk_map
         .pos_to_ent
         .extract_if(|k, _v| chunk_distance(*k, current_chunk) > render_distance)
         .collect();
@@ -32,7 +32,7 @@ pub fn queue_spawn_despawn_chunks(
 
     for u in -render_distance..=render_distance {
         for v in -render_distance..=render_distance {
-            let cords = [current_chunk[0] + u, current_chunk[1] + v];
+            let cords = [current_chunk[0] + u, current_chunk[1] + v].into();
             if !chunk_map.pos_to_ent.contains_key(&cords) {
                 chunk_queue.enqueue(cords);
             }
@@ -54,7 +54,9 @@ pub fn dequeue_all_chunks(
         &mut chunk_map,
         commands,
         &breg,
-        Some(|x: &[i32; 2]| chunk_distance(*x, current_chunk.0) < render_settings.render_distance),
+        Some(|x: &ChunkCords| {
+            chunk_distance(*x, current_chunk.0) < render_settings.render_distance
+        }),
         &render_settings,
         &terrain_config,
     );

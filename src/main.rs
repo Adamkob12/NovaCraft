@@ -9,6 +9,7 @@ pub mod prelude {
         pub use novacraft_meshing_backend::prelude::direction::*;
     }
     pub use crate::AssetLoadingState;
+    pub use novacraft_utils::*;
 }
 
 pub mod action;

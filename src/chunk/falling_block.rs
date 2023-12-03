@@ -4,8 +4,8 @@ use crate::action::{properties::FallingBlock, PlaceBlockGlobalEvent};
 
 use super::*;
 
+use crate::action::VOXEL_DIMS;
 use crate::player::RigidLayer;
-use crate::{action::VOXEL_DIMS, utils::to_global_pos};
 use bevy_xpbd_3d::prelude::*;
 
 pub fn follow_falling_block(
@@ -15,18 +15,20 @@ pub fn follow_falling_block(
 ) {
     for (entity, hits, block, transform, FallingBlock { origin }) in falling_blocks.iter() {
         if !hits.is_empty() {
-            let (chunk_pos, block_index, flag) =
-                position_to_chunk_position(transform.translation + Vec3::Y * 0.1, CHUNK_DIMS);
-            let block_index = one_d_cords(block_index, CHUNK_DIMS);
-            if flag && block_index != *origin {
+            let BlockGlobalPos {
+                chunk_cords,
+                pos: block_pos,
+                valid: flag,
+            } = point_to_global_block_pos(transform.translation + Vec3::Y * 0.1, CHUNK_DIMS);
+            if flag && block_pos != *origin {
                 info!(
                     "Falling block collision, at chunk: {:?} at position: {}, by block: {:?}",
-                    chunk_pos, transform.translation, *block
+                    chunk_cords, transform.translation, *block
                 );
                 global_block_place_event_sender.send(PlaceBlockGlobalEvent {
                     block: *block,
-                    chunk_pos,
-                    block_index,
+                    chunk_cords,
+                    block_pos,
                 });
                 commands.entity(entity).despawn();
             }
@@ -38,8 +40,7 @@ pub(super) fn spawn_falling_block(
     commands: &mut Commands,
     mesh_handle: Handle<Mesh>,
     material: Handle<StandardMaterial>,
-    index: usize,
-    chunk_pos: ChunkCords,
+    global_pos: BlockGlobalPos,
     density: f32,
     block: Block,
 ) {
@@ -52,9 +53,8 @@ pub(super) fn spawn_falling_block(
         .spawn(PbrBundle {
             mesh: mesh_handle,
             material,
-            transform: Transform::from_translation(to_global_pos(
-                index,
-                chunk_pos,
+            transform: Transform::from_translation(global_block_pos_to_block_trans(
+                global_pos,
                 VOXEL_DIMS.into(),
                 CHUNK_DIMS,
             )),
@@ -83,5 +83,7 @@ pub(super) fn spawn_falling_block(
         )
         .insert(collider)
         .insert(block)
-        .insert(FallingBlock { origin: index });
+        .insert(FallingBlock {
+            origin: global_pos.pos,
+        });
 }

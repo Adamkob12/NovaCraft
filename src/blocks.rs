@@ -17,9 +17,24 @@ pub type BlockId = u16;
 
 #[derive(Event)]
 pub struct WorldBlockUpdate {
-    pub chunk_pos: ChunkCords,
-    pub block_index: usize,
+    pub chunk_cords: ChunkCords,
+    pub block_pos: BlockPos,
     pub block_update: Option<BlockUpdate>,
+}
+
+impl WorldBlockUpdate {
+    pub fn from_global_pos(global_pos: BlockGlobalPos) -> Self {
+        Self {
+            chunk_cords: global_pos.chunk_cords,
+            block_pos: global_pos.pos,
+            block_update: None,
+        }
+    }
+
+    pub fn with_block_update(mut self, block_update: BlockUpdate) -> Self {
+        self.block_update = Some(block_update);
+        self
+    }
 }
 
 pub enum BlockUpdate {

@@ -59,7 +59,7 @@ pub struct TargetBlock {
     pub ignore_flag: bool,
     pub target_entity: Entity,
     pub chunk_cords: ChunkCords,
-    pub block_index: usize,
+    pub block_pos: BlockPos,
     pub face_hit: Option<Face>,
     pub ray_direction: Vec3,
 }
@@ -166,33 +166,32 @@ fn update_target_block(
             let face = {
                 let mut to_return = None;
                 if ray_hit.normal == Vec3::Y {
-                    to_return = Some(Top);
+                    to_return = Some(Face::Top);
                 }
                 if ray_hit.normal == Vec3::NEG_Y {
-                    to_return = Some(Bottom);
+                    to_return = Some(Face::Bottom);
                 }
                 if ray_hit.normal == Vec3::X {
-                    to_return = Some(Right);
+                    to_return = Some(Face::Right);
                 }
                 if ray_hit.normal == Vec3::NEG_X {
-                    to_return = Some(Left);
+                    to_return = Some(Face::Left);
                 }
                 if ray_hit.normal == Vec3::Z {
-                    to_return = Some(Back);
+                    to_return = Some(Face::Back);
                 }
                 if ray_hit.normal == Vec3::NEG_Z {
-                    to_return = Some(Forward);
+                    to_return = Some(Face::Forward);
                 }
                 to_return
             };
             let impact_point = pos + ray_hit.time_of_impact * forward + SMALL_TRAVERSE * forward;
-            let (chunk_cords, block_index, _) =
-                position_to_chunk_position(impact_point, CHUNK_DIMS);
+            let global_pos = point_to_global_block_pos(impact_point, CHUNK_DIMS);
             *target_block = TargetBlock {
                 ignore_flag: false,
                 target_entity: ray_hit.entity,
-                chunk_cords,
-                block_index: one_d_cords(block_index, CHUNK_DIMS),
+                chunk_cords: global_pos.chunk_cords,
+                block_pos: global_pos.pos,
                 face_hit: face,
                 ray_direction: forward,
             };
@@ -248,7 +247,7 @@ impl Plugin for PlayerPlugin {
             .init_resource::<MovementSettings>()
             .init_resource::<TargetBlock>()
             .init_resource::<LastPressedKeys>()
-            .insert_resource(CurrentChunk([0, 0]))
+            .insert_resource(CurrentChunk([0, 0].into()))
             .add_systems(Startup, initial_grab_cursor)
             .add_systems(
                 Update,
@@ -275,7 +274,7 @@ fn update_current_chunk(
     player: Query<&Transform, With<PhysicalPlayer>>,
 ) {
     if let Ok(t) = player.get_single() {
-        let tmp = position_to_chunk(t.translation, CHUNK_DIMS);
+        let tmp = point_to_chunk_cords(t.translation, CHUNK_DIMS);
         if tmp != current_chunk.0 {
             current_chunk.0 = tmp;
         }
@@ -287,8 +286,8 @@ impl Default for TargetBlock {
         TargetBlock {
             ignore_flag: true,
             target_entity: Entity::PLACEHOLDER,
-            chunk_cords: [0, 0],
-            block_index: 0,
+            chunk_cords: [0, 0].into(),
+            block_pos: [0, 0, 0].into(),
             face_hit: None,
             ray_direction: Vec3::ONE,
         }

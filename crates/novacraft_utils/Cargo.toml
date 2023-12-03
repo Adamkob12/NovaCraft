@@ -7,4 +7,3 @@ edition = "2021"
 
 [dependencies]
 bevy_math = "0.12"
-novacraft_meshing_backend = { path = "../novacraft_meshing_backend" }

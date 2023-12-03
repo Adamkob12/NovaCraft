@@ -27,13 +27,13 @@ use spawn::*;
 use update_chunks::*;
 
 // Number of blocks along the y axis
-pub const HEIGHT: usize = 56;
+pub const HEIGHT: u32 = 56;
 // Number of blocks along the z axis
-pub const LENGTH: usize = 16;
+pub const LENGTH: u32 = 16;
 // Number of blocks along the x axis
-pub const WIDTH: usize = 16;
-pub const CHUNK_DIMS: (usize, usize, usize) = (WIDTH, HEIGHT, LENGTH);
-pub const CHUNK_TOTAL_BLOCKS: usize = HEIGHT * LENGTH * WIDTH;
+pub const WIDTH: u32 = 16;
+pub const CHUNK_DIMS: UVec3 = UVec3::new(WIDTH, HEIGHT, LENGTH);
+pub const CHUNK_TOTAL_BLOCKS: u32 = HEIGHT * LENGTH * WIDTH;
 pub const RENDER_DISTANCE: i32 = 12;
 
 pub const DEFAULT_SL: Option<SmoothLightingParameters> = Some(SmoothLightingParameters {
@@ -43,10 +43,12 @@ pub const DEFAULT_SL: Option<SmoothLightingParameters> = Some(SmoothLightingPara
     apply_at_gen: false,
 });
 
-pub type ChunkArr = [Block; CHUNK_TOTAL_BLOCKS];
-pub const EMPTY_CHUNK: ChunkArr = [Block::AIR; CHUNK_TOTAL_BLOCKS];
+pub const CHUNK_TOTAL_BLOCKS_USIZE: usize = CHUNK_TOTAL_BLOCKS as usize;
+pub type ChunkArr = ChunkGrid<Block, CHUNK_TOTAL_BLOCKS_USIZE>;
+pub const EMPTY_CHUNK: ChunkArr =
+    ChunkGrid::new([Block::AIR; CHUNK_TOTAL_BLOCKS as usize], CHUNK_DIMS);
 
-pub type ChunkCords = [i32; 2];
+pub type ChunkCords = crate::prelude::ChunkCords;
 
 #[derive(Component)]
 pub struct Cords(pub ChunkCords);
@@ -67,7 +69,7 @@ pub struct CloseChunk;
 pub struct ToConnect;
 
 #[derive(Component)]
-pub struct ToApplySL(pub usize, pub usize);
+pub struct ToApplySL(pub BlockPos, pub BlockPos);
 
 #[derive(Component)]
 pub struct ChunkPhysicalProperties(Vec<crate::player::RigidLayer>);
@@ -118,7 +120,7 @@ pub struct XSpriteMaterial(Handle<StandardMaterial>);
 
 #[derive(Resource, Default)]
 pub struct ChunkMap {
-    pub pos_to_ent: HashMap<[i32; 2], Entity>,
+    pub pos_to_ent: HashMap<ChunkCords, Entity>,
 }
 
 #[derive(Resource, PartialEq)]
@@ -135,7 +137,7 @@ pub struct ChunkPlugin;
 impl Plugin for ChunkPlugin {
     #[allow(unused_parens)]
     fn build(&self, app: &mut App) {
-        app.insert_resource(CurrentChunk([0, 0]))
+        app.insert_resource(CurrentChunk([0, 0].into()))
             .insert_resource(RenderSettings {
                 render_distance: RENDER_DISTANCE,
                 sl: DEFAULT_SL,

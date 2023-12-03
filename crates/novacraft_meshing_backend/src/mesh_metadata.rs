@@ -95,7 +95,7 @@ pub struct MeshMD<T> {
     // ChangeInVoxel: whether the voxel was added or removed,
     // [Option<T>; 6]: the neighbors of the voxel, in the same order as
     //    in the `Neighbors` data-type, if the voxel is "empty"- None.
-    pub(crate) changed_voxels: Vec<(T, usize, VoxelChange, [Option<T>; 6])>,
+    pub(crate) changed_voxels: Vec<(T, BlockPos, VoxelChange, [Option<T>; 6])>,
 }
 
 impl<T> MeshMD<T> {
@@ -109,12 +109,12 @@ impl<T> MeshMD<T> {
     pub fn log(
         &mut self,
         voxel_change: VoxelChange,
-        voxel_index: usize,
+        voxel_pos: BlockPos,
         voxel: T,
         neighboring_voxels: [Option<T>; 6],
     ) {
         self.changed_voxels
-            .push((voxel, voxel_index, voxel_change, neighboring_voxels));
+            .push((voxel, voxel_pos, voxel_change, neighboring_voxels));
     }
     /// Get read only of the `SmoothLightingParameters`
     pub fn get_sl_params(&self) -> Option<SmoothLightingParameters> {

@@ -1,6 +1,6 @@
 # Naming Conventions
 
-## Chunks
+## Chunk
 
 *dimensions / dims (short):* 
 Always represented as `Dimensions = (usize, usize, usize) (could be changed to bevy::math::UVec3)`, dims represent the physical 3d dimensions of a grid.
@@ -32,7 +32,7 @@ For example: the point <0.0, 0.0, 0.0> in the world, is touching 4 chunks:
 [0,0] in the direction of (+x, +z), [-1,0] in the direction of (-x,+z)
 [0,-1] in the direction of (+x, -z), [-1,-1] in the direction of (-x,-z)
 
-## Blocks
+## Block (or voxel)
 
 *index / block-index:*
 the index of a block is its one-dimensional index in a non-compressed chunk array.
@@ -44,6 +44,16 @@ for example, a chunk with dimensions 16x64x16
     let l = ((index - h * (length * width)) / width) as usize;
     let w = (index - h * (length * width) - l * width) as usize;
     [w, h, l]
+
+*global position:*
+a combination of the chunk cords, and the block position relative to the chunk.
+If the chunk dimensions are known, using these two parameters we can determine the position of
+the block on the "global" grid.
+
+*block translation:*
+the "pure" `[f32; 3]` / `Vec3` block position, for a block with `block_pos` the translation would
+be the `Transform::translation` (from Bevy) a block would have to physicaly appear in the same place as 
+the block with `block_pos` that is part of the grid.
 
 *face / side:*
 the face of a cubic block
