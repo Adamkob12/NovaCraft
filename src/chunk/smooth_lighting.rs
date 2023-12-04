@@ -1,14 +1,14 @@
-use super::{chunkmd::CMMD, *};
+use super::{chunkmd::SubChunkMD, *};
 use crate::blocks::meshreg::MeshRegistry;
 
 pub(super) fn apply_smooth_lighting_after_update(
     mut meshes: ResMut<Assets<Mesh>>,
-    mesh_query: Query<(&Handle<Mesh>, &CMMD, &Parent), With<CubeChunk>>,
+    mesh_query: Query<(&Handle<Mesh>, &SubChunkMD, &Parent), With<CubeSubChunk>>,
     chunks_to_apply_q: Query<(&Children, &AdjChunkGrids, &Grid)>,
     mut removed_components2: RemovedComponents<ToUpdate>,
-    breg: Res<MeshRegistry>,
+    mreg: Res<MeshRegistry>,
 ) {
-    let breg = Arc::new(breg.into_inner().to_owned());
+    let breg = Arc::new(mreg.into_inner().to_owned());
     for chunk_entity in removed_components2.read() {
         let Ok((mesh_handle, metadata, parent)) = mesh_query.get(chunk_entity) else {
             continue;
@@ -29,7 +29,7 @@ pub(super) fn apply_smooth_lighting_after_update(
                 &metadata.0.read().unwrap().extract_meshmd().unwrap(),
                 CHUNK_DIMS,
                 0,
-                CHUNK_TOTAL_BLOCKS,
+                CHUNK_TOTAL_BLOCKS_USIZE,
                 &*grid.read().unwrap(),
                 Some(&*north.read().unwrap()),
                 Some(&*south.read().unwrap()),
@@ -46,7 +46,7 @@ pub(super) fn apply_smooth_lighting_after_update(
 
 pub(super) fn apply_smooth_lighting_after_introduce(
     mut meshes: ResMut<Assets<Mesh>>,
-    mesh_query: Query<(&Handle<Mesh>, &CMMD, &Parent), With<CubeChunk>>,
+    mesh_query: Query<(&Handle<Mesh>, &SubChunkMD, &Parent), With<CubeSubChunk>>,
     chunks_to_apply_q: Query<(&Children, &AdjChunkGrids, &Grid)>,
     mut removed_components: RemovedComponents<ToIntroduce>,
     breg: Res<MeshRegistry>,
@@ -73,7 +73,7 @@ pub(super) fn apply_smooth_lighting_after_introduce(
                     &metadata.0.read().unwrap().extract_meshmd().unwrap(),
                     CHUNK_DIMS,
                     0,
-                    CHUNK_TOTAL_BLOCKS,
+                    CHUNK_TOTAL_BLOCKS_USIZE,
                     &*grid.read().unwrap(),
                     Some(&*north.read().unwrap()),
                     Some(&*south.read().unwrap()),
@@ -92,7 +92,7 @@ pub(super) fn apply_smooth_lighting_after_introduce(
 pub(super) fn apply_smooth_lighting_edgecases(
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
-    mesh_query: Query<(&Handle<Mesh>, &CMMD, &Parent), With<CubeChunk>>,
+    mesh_query: Query<(&Handle<Mesh>, &SubChunkMD, &Parent), With<CubeSubChunk>>,
     chunks_to_apply_q: Query<
         (Entity, &Children, &AdjChunkGrids, &Grid, &ToApplySL),
         Without<ToConnect>,
@@ -100,9 +100,9 @@ pub(super) fn apply_smooth_lighting_edgecases(
     breg: Res<MeshRegistry>,
 ) {
     let breg = Arc::new(breg.into_inner().to_owned());
-    for (entity, children, acj, Grid(grid), apply_sl) in chunks_to_apply_q.iter() {
-        for child in children {
-            if let Ok((mesh_handle, metadata, _)) = mesh_query.get(*child) {
+    for (parent_entity, subchunks, acj, Grid(grid), apply_sl) in chunks_to_apply_q.iter() {
+        for subchunk_entity in subchunks {
+            if let Ok((mesh_handle, metadata, _)) = mesh_query.get(*subchunk_entity) {
                 let mesh_ref_mut = meshes.get_mut(mesh_handle).unwrap();
                 let north = acj.north.as_ref().unwrap();
                 let south = acj.south.as_ref().unwrap();
@@ -117,8 +117,8 @@ pub(super) fn apply_smooth_lighting_edgecases(
                     mesh_ref_mut,
                     &metadata.0.read().unwrap().extract_meshmd().unwrap(),
                     CHUNK_DIMS,
-                    apply_sl.0,
-                    apply_sl.1,
+                    pos_to_index(apply_sl.0, CHUNK_DIMS).unwrap_or(0),
+                    pos_to_index(apply_sl.1, CHUNK_DIMS).unwrap_or(CHUNK_TOTAL_BLOCKS_USIZE),
                     &*grid.read().unwrap(),
                     Some(&*north.read().unwrap()),
                     Some(&*south.read().unwrap()),
@@ -129,7 +129,7 @@ pub(super) fn apply_smooth_lighting_edgecases(
                     Some(&*so_east.read().unwrap()),
                     Some(&*so_west.read().unwrap()),
                 );
-                commands.entity(entity).remove::<ToApplySL>();
+                commands.entity(parent_entity).remove::<ToApplySL>();
             }
         }
     }

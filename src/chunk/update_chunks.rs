@@ -9,13 +9,16 @@ use crate::{
 pub(super) fn update_cube_chunks(
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
-    breg: Res<MeshRegistry>,
-    mut chunks_to_update: Query<(Entity, &CMMD, &Handle<Mesh>), (With<ToUpdate>, With<CubeChunk>)>,
+    mreg: Res<MeshRegistry>,
+    mut chunks_to_update: Query<
+        (Entity, &SubChunkMD, &Handle<Mesh>),
+        (With<ToUpdate>, With<CubeSubChunk>),
+    >,
 ) {
-    let breg = Arc::new(breg.into_inner().clone());
+    let breg = Arc::new(mreg.into_inner().clone());
     for (entity, metadata, mesh_handle) in &mut chunks_to_update {
         let mesh = meshes.get_mut(mesh_handle).unwrap();
-        let ChunkMD::CubeMD(metadata) = &mut *metadata.0.write().unwrap() else {
+        let MetaData::CubeMD(metadata) = &mut *metadata.0.write().unwrap() else {
             continue;
         };
         update_mesh(mesh, metadata, Arc::clone(&breg).as_ref());
@@ -36,13 +39,16 @@ pub(super) fn update_cube_chunks(
 pub(super) fn update_xsprite_chunks(
     mut meshes: ResMut<Assets<Mesh>>,
     mut commands: Commands,
-    breg: Res<MeshRegistry>,
-    chunks_to_update: Query<(Entity, &CMMD, &Handle<Mesh>), (With<ToUpdate>, With<XSpriteChunk>)>,
+    mreg: Res<MeshRegistry>,
+    chunks_to_update: Query<
+        (Entity, &SubChunkMD, &Handle<Mesh>),
+        (With<ToUpdate>, With<XSpriteSubChunk>),
+    >,
 ) {
-    let breg = Arc::new(breg.into_inner().clone());
+    let breg = Arc::new(mreg.into_inner().clone());
     for (entity, metadata, mesh_handle) in chunks_to_update.iter() {
         let mesh = meshes.get_mut(mesh_handle).unwrap();
-        let ChunkMD::XSpriteMD(metadata) = &mut *metadata.0.write().unwrap() else {
+        let MetaData::XSpriteMD(metadata) = &mut *metadata.0.write().unwrap() else {
             continue;
         };
         update_xsprite_mesh(Arc::clone(&breg).as_ref(), mesh, metadata, CHUNK_DIMS);

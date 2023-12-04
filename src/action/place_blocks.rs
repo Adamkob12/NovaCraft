@@ -1,54 +1,90 @@
+// REFACTORED
+
 use bevy_xpbd_3d::prelude::contact_query::contact;
 use bevy_xpbd_3d::prelude::Collider;
 
 use crate::blocks::BlockPropertyRegistry;
-use crate::chunk::{chunkmd::CMMD, Chunk, ChunkCords, ChunkMap, Cords, Grid, ToUpdate, CHUNK_DIMS};
-use crate::chunk::{ChunkChild, CubeChunk, XSpriteChunk};
+use crate::chunk::{
+    chunkmd::SubChunkMD, ChunkCords, ChunkMap, Cords, Grid, ParentChunk, ToUpdate, CHUNK_DIMS,
+};
+use crate::chunk::{CubeSubChunk, Subchunk, XSpriteSubChunk};
 use crate::prelude::notical;
-use crate::utils::to_global_pos;
 
 use super::existence_conditions::ExistenceConditionSolverData;
 use super::meshreg::MeshRegistry;
 use super::properties::DynamicProperty;
 use super::*;
 
+/// An event that contains information about a *player* that has placed a block. Note this is
+/// different that a block being broken by the environment, for example.
+/// The parameters are (left to right):
+///     -[Entity]: The target sub-chunk entity. When the player placed the block, which chunk was
+///         he looking at.
+///     -[BlockPos]: The position of the block that came in contact with the line of sight of the
+///         player (The block at which the player was aiming at).
+///     -[Face]: The face of the block that the player hit.
+///     -[Block]: The block that the player was holding (the block to place).
+///
 #[derive(Event)]
-pub struct BlockPlaceEvent(pub Entity, pub usize, pub Face, pub Block);
+pub struct BlockPlaceEvent(pub Entity, pub BlockPos, pub Face, pub Block);
 
+/// The final event in the block-placing pipeline. The modular design of the pipeline
+/// allows for this event to be called from all over the code. This event will be processed
+/// by the `global_block_placer` system.
 #[derive(Event)]
 pub struct PlaceBlockGlobalEvent {
     pub block: Block,
-    pub chunk_pos: ChunkCords,
-    pub block_index: usize,
+    pub chunk_cords: ChunkCords,
+    pub block_pos: BlockPos,
 }
 
+impl PlaceBlockGlobalEvent {
+    pub fn from_global_pos(global_pos: BlockGlobalPos, block: Block) -> Self {
+        Self {
+            block,
+            block_pos: global_pos.pos,
+            chunk_cords: global_pos.chunk_cords,
+        }
+    }
+}
+
+/// This system handles `BlockPlaceEvent`(s). Those are events when the player placed a block.
+/// There is specific logic in this system that prevents undesirable block placements, such as:
+/// grass in the air, block that overlaps with player, block that overlaps with falling blocks,
+/// etc. In the event where a block would be placed by the environment or by a command, this logic
+/// will not be checked before placing the block.
 pub(super) fn handle_place_block_event(
     mut place_block_event_reader: EventReader<BlockPlaceEvent>,
     mut global_block_place_event_sender: EventWriter<PlaceBlockGlobalEvent>,
-    child_chunk_query: Query<&Parent, With<ChunkChild>>,
+    child_chunk_query: Query<&Parent, With<Subchunk>>,
     dyn_preg: Res<BlockPropertyRegistry<DynamicProperty>>,
     parent_chunk_query: Query<(&Cords, &Grid)>,
     player_q: Query<(&Transform, &Collider), With<PhysicalPlayer>>,
     blocks_q: Query<(&Block, &Collider, &Transform)>,
 ) {
     'event_loop: for place_block_event in place_block_event_reader.read() {
-        let BlockPlaceEvent(entity, index, face, block_to_place) = place_block_event;
-        if let Ok(parent) = child_chunk_query.get(*entity) {
-            if let Ok((Cords(cords), Grid(grid))) = parent_chunk_query.get(parent.get()) {
-                let (block_index, chunk_pos) = {
-                    if let Some(neighbor) = get_neighbor(*index, *face, CHUNK_DIMS) {
-                        (neighbor, *cords)
+        let BlockPlaceEvent(subchunk_entity, block_pos, face, block_to_place) = place_block_event;
+        if let Ok(parent) = child_chunk_query.get(*subchunk_entity) {
+            if let Ok((Cords(chunk_cords), Grid(chunk_grid))) = parent_chunk_query.get(parent.get())
+            {
+                // Get the position and chunk cords of the actual place to put the block in. This
+                // is calculated by seeing which side of the block the player was aiming at.
+                let (block_pos, chunk_cords) = {
+                    if let Some(neighbor) = neighbor_pos(*block_pos, *face, CHUNK_DIMS) {
+                        (neighbor, *chunk_cords)
                     } else {
                         let neighbor =
-                            get_neigbhor_across_chunk_safe(CHUNK_DIMS, *index, *face).unwrap();
+                            neighbor_across_chunk(*block_pos, *face, CHUNK_DIMS).unwrap();
                         let change = to_cords(Some(notical::Direction::from(*face)));
-                        let new_cords = [cords[0] + change[0], cords[1] + change[1]];
-                        (neighbor, new_cords)
+                        let new_cords = [chunk_cords[0] + change[0], chunk_cords[1] + change[1]];
+                        (neighbor, new_cords.into())
                     }
                 };
-                // The global positin of the block
-                let block_global_pos =
-                    to_global_pos(block_index, chunk_pos, VOXEL_DIMS.into(), CHUNK_DIMS);
+
+                let global_pos = BlockGlobalPos::new(block_pos, chunk_cords);
+                let block_translation =
+                    global_block_pos_to_block_trans(global_pos, VOXEL_DIMS.into(), CHUNK_DIMS);
+
                 // check if the to-be placed block overlaps with the player
                 if BlockPropertyRegistry::is_collidable(block_to_place) {
                     let (transform, collider) = player_q.get_single().unwrap();
@@ -57,7 +93,7 @@ pub(super) fn handle_place_block_event(
                         transform.translation,
                         Quat::IDENTITY,
                         &Collider::cuboid(0.99, 0.85, 0.99),
-                        block_global_pos,
+                        block_translation,
                         Quat::IDENTITY,
                         0.0,
                     )
@@ -78,7 +114,7 @@ pub(super) fn handle_place_block_event(
                             transform.translation,
                             Quat::IDENTITY,
                             &Collider::cuboid(0.99, 0.99, 0.99),
-                            block_global_pos,
+                            block_translation,
                             Quat::IDENTITY,
                             0.0,
                         )
@@ -92,19 +128,15 @@ pub(super) fn handle_place_block_event(
                 }
 
                 // Check if the to-be placed block can even exist in the given place
-                let mut surrounding_blocks = [None; 6];
-                (0..6).into_iter().for_each(|j| {
-                    surrounding_blocks[j] = Some(
-                        get_neighbor(block_index, Face::from(j), CHUNK_DIMS)
-                            .map_or(Block::AIR, |i| grid.read().unwrap()[i]),
-                    )
-                });
-                let solver_data = ExistenceConditionSolverData { surrounding_blocks };
+                // (based on the defined DynamicProperty::ExistenceCondition)
+                let solver_data = ExistenceConditionSolverData {
+                    surrounding_blocks: chunk_grid.read().unwrap().get_neighbors(block_pos),
+                };
                 for dynamic_property in dyn_preg.get_properties(block_to_place) {
                     match dynamic_property {
                         DynamicProperty::ExistenceCondition(cond) => {
                             if !cond.solve(solver_data) {
-                                info!("Attemp to place block that can't exist there was stopped");
+                                info!("Attemp to place block in a position that it can't exist in was stopped");
                                 continue 'event_loop;
                             }
                         }
@@ -115,84 +147,85 @@ pub(super) fn handle_place_block_event(
                 // send the global block place event
                 global_block_place_event_sender.send(PlaceBlockGlobalEvent {
                     block: *block_to_place,
-                    chunk_pos,
-                    block_index,
+                    chunk_cords,
+                    block_pos,
                 });
             }
         }
     }
 }
 
+/// This system executes once every frame. It is the final stage of the block placing pipeline, and after its
+/// execution, block-placing is unreversable. It processes all of the pending `PlaceBlockGlobalEvent`(s)
+/// and marks the chunks that need to be updated. The meshes those chunks will be updated thereafter.
 pub fn global_block_placer(
     mut global_block_place_events: EventReader<PlaceBlockGlobalEvent>,
     mut world_block_update_sender: EventWriter<WorldBlockUpdate>,
     mut break_block_global_sender: EventWriter<BreakBlockGlobalEvent>,
     mut commands: Commands,
-    breg: Res<MeshRegistry>,
+    mreg: Res<MeshRegistry>,
     chunk_map: Res<ChunkMap>,
-    parent_chunks: Query<(&Grid, &Children), With<Chunk>>,
-    chunk_metadata: Query<(&CMMD, Has<CubeChunk>, Has<XSpriteChunk>)>,
+    parent_chunks: Query<(&Grid, &Children), With<ParentChunk>>,
+    chunk_metadata: Query<(&SubChunkMD, Has<CubeSubChunk>, Has<XSpriteSubChunk>)>,
 ) {
     let len = global_block_place_events.len();
-    for PlaceBlockGlobalEvent {
+    for &PlaceBlockGlobalEvent {
         block,
-        chunk_pos,
-        block_index: block_pos,
+        chunk_cords,
+        block_pos,
     } in global_block_place_events.read()
     {
-        // Placing an Air block is equivalent to breaking the block
-        if *block == Block::AIR {
-            break_block_global_sender.send(BreakBlockGlobalEvent {
-                chunk_pos: Some(*chunk_pos),
-                chunk_entity: None,
-                block_index: *block_pos,
-            });
+        // Placing an Air block is equivalent to breaking the block, so we just send a block
+        // breaking event to execute next frame.
+        if block == Block::AIR {
+            break_block_global_sender.send(BreakBlockGlobalEvent::from_global_pos(
+                BlockGlobalPos::new(block_pos, chunk_cords),
+            ));
             continue;
         }
-        if let (Some(Grid(grid)), children) =
-            chunk_map
-                .pos_to_ent
-                .get(chunk_pos)
-                .map_or((None, [Entity::PLACEHOLDER].iter()), |e| {
-                    parent_chunks
-                        .get(*e)
-                        .map(|(g, c)| (Some(g), c.iter()))
-                        .unwrap_or((None, [Entity::PLACEHOLDER].iter()))
-                })
-        {
-            let adj_blocks = [None::<Option<i8>>; 6]
-                .iter()
-                .enumerate()
-                .map(|(i, _)| {
-                    get_neighbor(*block_pos, Face::from(i), CHUNK_DIMS)
-                        .map(|n| grid.read().unwrap()[n])
-                })
-                .collect::<Vec<Option<Block>>>()
-                .try_into()
-                .unwrap();
-
-            for child in children {
-                if let Ok((md, cube_chunk, xsprite_chunk)) = chunk_metadata.get(*child) {
-                    // make sure we update the metadata of the right chunk
-                    match breg.get_mesh(block) {
+        if let (Some(Grid(chunk_grid)), subchunks) = chunk_map.pos_to_ent.get(&chunk_cords).map_or(
+            (None, [Entity::PLACEHOLDER].iter()),
+            |e| {
+                parent_chunks
+                    .get(*e)
+                    .map(|(g, c)| (Some(g), c.iter()))
+                    .unwrap_or((None, [Entity::PLACEHOLDER].iter()))
+            },
+        ) {
+            for subchunk in subchunks {
+                if let Ok((subchunk_md, cube_chunk, xsprite_chunk)) = chunk_metadata.get(*subchunk)
+                {
+                    // make sure we update the metadata of the right subchunk
+                    match mreg.get_mesh(&block) {
                         VoxelMesh::NormalCube(_) if xsprite_chunk => continue,
                         VoxelMesh::XSprite(_) if cube_chunk => continue,
                         VoxelMesh::Null => continue,
                         _ => {}
                     }
-                    md.0.write()
-                        .unwrap()
-                        .log_place(*block_pos, *block, adj_blocks);
+                    // Update the metadata
+                    subchunk_md.0.write().unwrap().log_place(
+                        block_pos,
+                        block,
+                        chunk_grid.read().unwrap().get_neighbors(block_pos),
+                    );
 
-                    commands.entity(*child).insert(ToUpdate);
-                    asl2ac(&mut commands, *block_pos, *chunk_pos, &chunk_map, len);
+                    // Insert marker components and apply smooth lighting.
+                    commands.entity(*subchunk).insert(ToUpdate);
+                    apply_smooth_lighting_util(
+                        &mut commands,
+                        block_pos,
+                        chunk_cords,
+                        &chunk_map,
+                        len,
+                    );
                 }
             }
 
-            grid.write().unwrap()[*block_pos] = *block;
+            // Set the new block in the grid, broadcast a world update.
+            let _ = chunk_grid.write().unwrap().set_block(block, block_pos);
             send_world_updates_surrounding_blocks(
-                *block_pos,
-                *chunk_pos,
+                block_pos,
+                chunk_cords,
                 &mut world_block_update_sender,
                 BlockUpdate::Placed,
             );

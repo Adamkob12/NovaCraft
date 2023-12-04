@@ -1,13 +1,19 @@
+// REFACTORED
+
 use novacraft_derive::InitBlockProperties;
 
 use super::{dynamic_property::BlockTransformation, *};
 const BLOCK_DENSITY: f32 = 100.0;
 
+/// This is a marker trait for all of the Properties that require their own registry.
 pub trait BlockProperty {}
 
+/// Here we declare all of the block propertes we want to use in the game. The derive macro ['InitBlockProperties'](InitBlockProperties)
+/// automatically implements the [`BlockProperty`] trait for them, defines and implements [`Default`] for
+/// their own [`BlockPropertyRegistry`] and initializes them as a resource in Bevy.
 #[allow(non_camel_case_types)]
 #[derive(InitBlockProperties)]
-pub enum PROPERTY_INITIALIZER {
+pub enum __InitProperties__ {
     Physical(PhysicalProperty),
     PassiveProperty(PassiveProperty),
     Perceptible(PerceptibleProperty),
@@ -16,7 +22,7 @@ pub enum PROPERTY_INITIALIZER {
 
 #[derive(Component)]
 pub struct FallingBlock {
-    pub origin: usize,
+    pub origin: BlockPos,
 }
 
 #[derive(Clone, Copy, PartialEq)]
@@ -32,7 +38,6 @@ pub enum PassiveProperty {
 #[derive(Clone, Copy)]
 pub enum PerceptibleProperty {
     LightSource(PointLight),
-    // TODO: audio stuff
     AudioSource,
 }
 
@@ -41,8 +46,9 @@ pub enum DynamicProperty {
     ExistenceCondition(ExistenceCondition),
 }
 
+// Add some of our own implementation for the macro-generated BlockPropertyRegistry<PhysicalProperty>
 impl BlockPropertyRegistry<PhysicalProperty> {
-    pub fn get_density(&self, block: &Block) -> f32 {
+    pub fn get_density(block: &Block) -> f32 {
         match block {
             Block::AIR => 0.0,
             _ => BLOCK_DENSITY,

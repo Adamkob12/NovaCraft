@@ -1,7 +1,7 @@
 use crate::blocks::Block;
-use crate::chunk::{CHUNK_DIMS, CHUNK_TOTAL_BLOCKS, HEIGHT, LENGTH, WIDTH};
+use crate::chunk::{ChunkCords, CHUNK_DIMS, CHUNK_TOTAL_BLOCKS_USIZE, HEIGHT, LENGTH, WIDTH};
 use noise::NoiseFn;
-use novacraft_meshing_backend::prelude::one_d_cords;
+use novacraft_utils::pos_to_index;
 use rand::prelude::*;
 pub const NOISE_SEED: usize = 10;
 pub const NOISE_SEED_SQRD: usize = NOISE_SEED * NOISE_SEED;
@@ -35,13 +35,13 @@ impl Plugin for TerrainPlugin {
 }
 
 // Generate chunk from noise
-pub fn generate_flat_chunk(sea_level: usize) -> [Block; CHUNK_TOTAL_BLOCKS] {
+pub fn generate_flat_chunk(sea_level: u32) -> [Block; CHUNK_TOTAL_BLOCKS_USIZE] {
     let sea_level = sea_level.min(HEIGHT - 1);
-    let mut chunk = [Block::AIR; CHUNK_TOTAL_BLOCKS];
+    let mut chunk = [Block::AIR; CHUNK_TOTAL_BLOCKS_USIZE];
     for k in 0..HEIGHT {
         for j in 0..LENGTH {
             for i in 0..WIDTH {
-                chunk[one_d_cords([i, k, j], CHUNK_DIMS)] = {
+                chunk[pos_to_index([i, k, j].into(), CHUNK_DIMS).unwrap() as usize] = {
                     if k == sea_level + 1 {
                         if true {
                             Block::GREENERY
@@ -50,7 +50,7 @@ pub fn generate_flat_chunk(sea_level: usize) -> [Block; CHUNK_TOTAL_BLOCKS] {
                         }
                     } else if k == sea_level {
                         Block::GRASS
-                    } else if k < sea_level && k > sea_level - 3 {
+                    } else if k < sea_level && k + 3 > sea_level {
                         Block::DIRT
                     } else if k < sea_level {
                         Block::STONE
@@ -66,24 +66,24 @@ pub fn generate_flat_chunk(sea_level: usize) -> [Block; CHUNK_TOTAL_BLOCKS] {
 
 // Generate chunk from noise
 pub fn generate_chunk(
-    cords: [i32; 2],
+    cords: ChunkCords,
     noise: &impl NoiseFn<f64, 2>,
     noise_factor_cont: f64,
     noise_factor_scale: f64,
-) -> [Block; CHUNK_TOTAL_BLOCKS] {
+) -> [Block; CHUNK_TOTAL_BLOCKS_USIZE] {
     let mut rng = rand::thread_rng();
-    let mut height_map: [usize; WIDTH * LENGTH] = [0; WIDTH * LENGTH];
-    let mut chunk = [Block::AIR; CHUNK_TOTAL_BLOCKS];
+    let mut height_map: [u32; (WIDTH * LENGTH) as usize] = [0; (WIDTH * LENGTH) as usize];
+    let mut chunk = [Block::AIR; CHUNK_TOTAL_BLOCKS_USIZE];
     // First, generate a height map
     for j in 0..LENGTH {
         for i in 0..WIDTH {
-            height_map[i + j * WIDTH] = (HEIGHT as f64 * 1.0 / noise_factor_scale
+            height_map[(i + j * WIDTH) as usize] = (HEIGHT as f64 * 1.0 / noise_factor_scale
                 + (noise.get([
                     ((i as i32 + cords[0] * WIDTH as i32) as f64 + 0.5) * noise_factor_cont,
                     ((j as i32 + cords[1] * LENGTH as i32) as f64 + 0.5) * noise_factor_cont,
                 ]) * HEIGHT as f64
                     * (1.0 - 1.0 / noise_factor_scale)))
-                .min(HEIGHT as f64 - 1.0) as usize;
+                .min(HEIGHT as f64 - 1.0) as u32;
         }
     }
     // From the height map, assign a value to each block based on wether it is below or above the
@@ -91,10 +91,10 @@ pub fn generate_chunk(
     for y in 0..HEIGHT {
         for z in 0..LENGTH {
             for x in 0..WIDTH {
-                if height_map[x + z * WIDTH] == y && y > HEIGHT / 2 {
-                    chunk[x + z * WIDTH + y * WIDTH * LENGTH] = Block::GRASS;
-                } else if height_map[x + z * WIDTH] + 1 == y && y > HEIGHT / 2 + 1 {
-                    chunk[x + z * WIDTH + y * WIDTH * LENGTH] = {
+                if height_map[(x + z * WIDTH) as usize] == y && y > HEIGHT / 2 {
+                    chunk[(x + z * WIDTH + y * WIDTH * LENGTH) as usize] = Block::GRASS;
+                } else if height_map[(x + z * WIDTH) as usize] + 1 == y && y > HEIGHT / 2 + 1 {
+                    chunk[(x + z * WIDTH + y * WIDTH * LENGTH) as usize] = {
                         let r: f32 = rng.gen();
                         if r > 0.93 {
                             Block::GREENERY
@@ -102,12 +102,12 @@ pub fn generate_chunk(
                             Block::AIR
                         }
                     }
-                } else if y > height_map[x + z * WIDTH] {
-                    chunk[x + z * WIDTH + y * WIDTH * LENGTH] = Block::AIR;
+                } else if y > height_map[(x + z * WIDTH) as usize] {
+                    chunk[(x + z * WIDTH + y * WIDTH * LENGTH) as usize] = Block::AIR;
                 } else if y > HEIGHT / 4 {
-                    chunk[x + z * WIDTH + y * WIDTH * LENGTH] = Block::DIRT;
+                    chunk[(x + z * WIDTH + y * WIDTH * LENGTH) as usize] = Block::DIRT;
                 } else if y <= HEIGHT / 4 {
-                    chunk[x + z * WIDTH + y * WIDTH * LENGTH] = Block::STONE;
+                    chunk[(x + z * WIDTH + y * WIDTH * LENGTH) as usize] = Block::STONE;
                 }
             }
         }

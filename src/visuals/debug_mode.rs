@@ -1,11 +1,15 @@
+// REFACTORED
+
 use bevy::pbr::wireframe::WireframeConfig;
 
 use crate::action::PhysicalPlayer;
 use crate::blocks::Block;
-use crate::chunk::{Chunk, ChunkChild, Grid, CHUNK_DIMS, LENGTH, WIDTH};
+use crate::chunk::{Grid, ParentChunk, Subchunk, LENGTH, WIDTH};
 
 use super::*;
 
+/// Debug mode is a toggleable mode that if on displays all kinds of debugging data, parallel to
+/// Minecraft's "F3 mode".
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default, States)]
 pub(super) enum DebugMode {
     On,
@@ -154,8 +158,8 @@ pub(super) fn update_debug_ui(
     mut debug_ui_text: Query<(&DebugModeText, &mut Text)>,
     player_query: Query<&Transform, With<PhysicalPlayer>>,
     target_block: Res<TargetBlock>,
-    grids_query: Query<&Grid, With<Chunk>>,
-    parents_query: Query<&Parent, With<ChunkChild>>,
+    grids_query: Query<&Grid, With<ParentChunk>>,
+    parents_query: Query<&Parent, With<Subchunk>>,
 ) {
     for (DebugModeText(debug_text_type), mut text) in debug_ui_text.iter_mut() {
         match debug_text_type {
@@ -169,8 +173,12 @@ pub(super) fn update_debug_ui(
                     text.sections[1].value = format!("{:?}", Block::AIR);
                 } else if let Ok(parent) = parents_query.get(target_block.target_entity) {
                     if let Ok(Grid(grid)) = grids_query.get(parent.get()) {
-                        text.sections[1].value =
-                            format!("{:?}", grid.read().unwrap()[target_block.block_index]);
+                        text.sections[1].value = format!(
+                            "{:?}",
+                            grid.read()
+                                .unwrap()
+                                .get_block_or(target_block.block_pos, Block::AIR)
+                        );
                     }
                 }
             }
@@ -178,10 +186,7 @@ pub(super) fn update_debug_ui(
                 if target_block.ignore_flag {
                     text.sections[1].value = "NaN".into();
                 } else {
-                    // get pos in 3d
-                    let tmp = three_d_cords_arr(target_block.block_index, CHUNK_DIMS);
-                    // convert to Vec3 and offset
-                    let tmp = Vec3::new(tmp[0] as f32, tmp[1] as f32, tmp[2] as f32);
+                    let tmp = target_block.block_pos.as_vec3();
                     // offset the chunk dims
                     let block_pos = tmp
                         + Vec3::new(

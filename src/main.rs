@@ -9,6 +9,7 @@ pub mod prelude {
         pub use novacraft_meshing_backend::prelude::direction::*;
     }
     pub use crate::AssetLoadingState;
+    pub use novacraft_utils::*;
 }
 
 pub mod action;
@@ -26,7 +27,6 @@ pub mod terrain;
 pub mod utils;
 pub mod visuals;
 
-#[allow(unused_imports)]
 use bevy::{pbr::wireframe::WireframePlugin, window::WindowResolution};
 use bevy_xpbd_3d::prelude::*;
 use prelude::*;

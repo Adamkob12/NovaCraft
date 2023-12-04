@@ -1,8 +1,9 @@
+// REFACTORED
+
 use super::properties::{
     BlockProperty, DynamicProperty, PassiveProperty, PerceptibleProperty, PhysicalProperty,
 };
 use super::*;
-use novacraft_meshing_backend::prelude::Face;
 
 pub struct PropertyCollection<T: BlockProperty>(pub Vec<T>);
 
@@ -34,6 +35,9 @@ impl<T: BlockProperty> std::ops::Deref for PropertyCollection<T> {
     }
 }
 
+/// The `BlockDescriptor` holds all of the information about a block. After describing a block by
+/// defining a method for this struct with the same name as the block, the block's properties can
+/// be split into registries and used in the game logic.
 #[derive(Default)]
 pub struct BlockDescriptor {
     pub mesh_builder: MeshBuilder,
@@ -43,6 +47,15 @@ pub struct BlockDescriptor {
     pub dynamic: PropertyCollection<DynamicProperty>,
 }
 
+/// There are 4 types of voxel meshes in NovaCraft:
+///     -[`Cube`](MeshBuilder::Cube): This is the most basic type of voxel mesh. This includes all the cubes that need
+///         have their unseen faces culled.
+///     -[`XSprite`](MeshBuilder::XSprite): This type of voxel mesh is named after the X shape that two sprites are put
+///         in to create this mesh. This is commonly used for Foliage, flowers, etc.
+///     -[`External` (aka `Custom`)](MeshBuilder::External): This type of voxel mesh includes imported meshes that require
+///         run-time loading after starting the game. As opposed to the two above, which are
+///         already know and well defined in the [Meshing Backend](`novacraft_meshing_backend`).
+///     -[`Null` (aka `Air`)](MeshBuilder::Null): No mesh, this is used for Air. Could be used for invisible blocks.
 #[derive(Default)]
 pub enum MeshBuilder {
     Cube(CubeMeshBuilder),
@@ -63,17 +76,18 @@ impl Into<VoxelMesh<Mesh>> for MeshBuilder {
     }
 }
 
+/// Simple wrapper made to define the UV coordinates of a cubic voxel mesh.
 pub struct CubeTextureCords {
-    pub top: AtlasDims,
-    pub bottom: AtlasDims,
-    pub right: AtlasDims,
-    pub left: AtlasDims,
-    pub back: AtlasDims,
-    pub forward: AtlasDims,
+    pub top: AtlasCords,
+    pub bottom: AtlasCords,
+    pub right: AtlasCords,
+    pub left: AtlasCords,
+    pub back: AtlasCords,
+    pub forward: AtlasCords,
 }
 
 pub struct XSpriteTextureCords {
-    pub sprite: AtlasDims,
+    pub sprite: AtlasCords,
 }
 
 impl Into<CubeMeshBuilder> for CubeTextureCords {
@@ -95,13 +109,13 @@ impl Into<Mesh> for ExternalMesh<CubeMeshBuilder> {
 }
 
 impl XSpriteTextureCords {
-    pub fn uniform(dims: AtlasDims) -> Self {
+    pub const fn uniform(dims: AtlasCords) -> Self {
         Self { sprite: dims }
     }
 }
 
 impl CubeTextureCords {
-    pub fn uniform(dims: AtlasDims) -> Self {
+    pub const fn uniform(dims: AtlasCords) -> Self {
         Self {
             top: dims,
             bottom: dims,
@@ -112,7 +126,7 @@ impl CubeTextureCords {
         }
     }
 
-    pub fn with_face(mut self, face: Face, dims: AtlasDims) -> Self {
+    pub fn with_face(mut self, face: Face, dims: AtlasCords) -> Self {
         match face {
             Face::Top => self.top = dims,
             Face::Bottom => self.bottom = dims,
@@ -125,12 +139,31 @@ impl CubeTextureCords {
     }
 }
 
-pub type AtlasDims = [u32; 2];
+/// The coordniates for a texture on the texture atlas for voxel meshes.
+pub type AtlasCords = [u32; 2];
 
+const MISSING_TEXTURE: AtlasCords = [TEXTURE_ATLAS_DIMS[0] - 1, TEXTURE_ATLAS_DIMS[1] - 1];
+pub const MISSING_ASSET_MESH: CubeMeshBuilder =
+    CubeMeshBuilder::from_cube_texture_cords(CubeTextureCords::uniform(MISSING_TEXTURE));
+
+/// A struct used to represent a voxel mesh that needs to be loaded from an asset.
+/// [`alt_mesh`](ExternalMesh::alt_mesh) is the Mesh to used while the main mesh is loaded or if it
+/// failed loading. The default alt_mesh is a normal cubic block with the texture of the last
+/// texture in the texture atlas (bottom right corner).
 pub struct ExternalMesh<M: Into<Mesh>> {
-    alt_mesh: M,
+    pub alt_mesh: M,
 }
 
+impl Default for ExternalMesh<CubeMeshBuilder> {
+    fn default() -> Self {
+        Self {
+            alt_mesh: MISSING_ASSET_MESH,
+        }
+    }
+}
+
+/// Used as a buffer before building the `Cubic` mesh of a voxel. By default, it will generate the
+/// voxel mesh using the constants defined in the super module, but they can be overridden.
 pub struct CubeMeshBuilder {
     voxel_dims: [f32; 3],
     voxel_center: [f32; 3],
@@ -143,7 +176,7 @@ pub struct CubeMeshBuilder {
 
 #[allow(dead_code)]
 impl CubeMeshBuilder {
-    pub fn from_cube_texture_cords(cube_texture_cords: CubeTextureCords) -> CubeMeshBuilder {
+    pub const fn from_cube_texture_cords(cube_texture_cords: CubeTextureCords) -> CubeMeshBuilder {
         Self {
             voxel_dims: VOXEL_DIMS,
             voxel_center: VOXEL_CENTER,
@@ -160,12 +193,12 @@ impl CubeMeshBuilder {
             self.voxel_dims,
             self.texture_atlas_dims,
             [
-                (Top, self.cube_texture_cords.top),
-                (Bottom, self.cube_texture_cords.bottom),
-                (Right, self.cube_texture_cords.right),
-                (Left, self.cube_texture_cords.left),
-                (Back, self.cube_texture_cords.back),
-                (Forward, self.cube_texture_cords.forward),
+                (Face::Top, self.cube_texture_cords.top),
+                (Face::Bottom, self.cube_texture_cords.bottom),
+                (Face::Right, self.cube_texture_cords.right),
+                (Face::Left, self.cube_texture_cords.left),
+                (Face::Back, self.cube_texture_cords.back),
+                (Face::Forward, self.cube_texture_cords.forward),
             ],
             self.voxel_center,
             self.padding,
@@ -200,6 +233,8 @@ impl CubeMeshBuilder {
     }
 }
 
+/// Used as a buffer before building the `XSprite` mesh of a voxel. By default, it will generate the
+/// voxel mesh using the constants defined in the super module, but they can be overridden.
 pub struct XSpriteMeshBuilder {
     voxel_dims: [f32; 3],
     voxel_center: [f32; 3],

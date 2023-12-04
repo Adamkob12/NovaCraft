@@ -13,11 +13,6 @@ pub enum MeshingAlgorithm {
 }
 
 /// Arguments:
-/// - [`dims`](Dimensions): the dimensions of the grid, (width, height, length). (eg: (16, 256, 16))
-/// - [`outer_layer`]([Face; 6]): Which edges (corresponding to their Face direction) of the mesh
-///     should we cull. ex: in Minecraft you wouldn't cull the top because the player can see the
-///     top of the chunk. But culling the bottom is ok because the player "shouldn't be there" so
-///     he won't see it.
 /// - [`grid`](&[T]): one dimentional slice of voxels, to turn into a single mesh, the function
 ///     assumes the real grid is 3 dimentional, and that the width, height and length match the
 ///     dimensions given with the dims argument.
@@ -35,121 +30,58 @@ pub enum MeshingAlgorithm {
 /// - The first mesh is the mesh of the full, normal cube voxels. (for example, the stone blocks)
 /// - MeshMD<T> is the mesh metadata that the user needs to keep if they want to update the mesh.
 /// - None: Couldn't generate the mesh
-pub fn mesh_grid<T>(
-    dims: Dimensions,
+pub fn meshify_cubic_voxels<T: Copy, const N: usize>(
     outer_layer: &[Face],
-    grid: &[T],
+    grid: &ChunkGrid<T, N>,
     reg: &impl VoxelRegistry<Voxel = T>,
     meshing_algorithm: MeshingAlgorithm,
     smooth_lighting_params: Option<SmoothLightingParameters>,
 ) -> Option<(Mesh, MeshMD<T>)> {
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-    let ch_len = grid.len();
-    let mut vivi = VIVI::new(ch_len);
-    assert_eq!(
-        ch_len,
-        dims.0 * dims.1 * dims.2,
-        "The product of the value of each of the dimensions must be the length of 
-        the one dimentional grid array."
-    );
-
-    let [cull_top, cull_bottom, cull_right, cull_left, cull_back, cull_forward] = {
-        let mut r = [true, true, true, true, true, true];
-        for f in outer_layer {
-            r[*f as usize] = false;
-        }
-        r
-    };
-    let width = dims.0;
-    let length = dims.2;
-    let height = dims.1;
-    let t = width * length * height;
-    let mut rle_bool_voxel = RleVec::new();
+    let total_voxels = grid.len();
+    let mut vivi = VIVI::new(total_voxels);
+    let mut outer_layers_to_call = [true, true, true, true, true, true];
+    for f in outer_layer {
+        outer_layers_to_call[*f as usize] = false;
+    }
 
     let mut indices: Vec<u32> = vec![];
     let mut vertices: Vec<(MeshVertexAttribute, VertexAttributeValues)> = vec![];
     for att in reg.all_attributes().iter() {
         vertices.push((att.clone(), VertexAttributeValues::new(att.format.clone())));
     }
-
     let voxel_dims = reg.get_voxel_dimensions();
     let center = reg.get_center();
-    for k in 0..height {
-        for j in 0..length {
-            for i in 0..width {
-                let cord = k * length * width + j * width + i;
-                let above = cord + length * width;
-                let below = cord.checked_sub(width * length).unwrap_or(usize::MAX);
-                let right = cord + 1;
-                let left = cord.checked_sub(1).unwrap_or(usize::MAX);
-                let back = cord + width;
-                let forward = cord.checked_sub(width).unwrap_or(usize::MAX);
-                let mut neig = [false; 6];
-                let position_offset = (
-                    i as f32 * voxel_dims[0],
-                    k as f32 * voxel_dims[1],
-                    j as f32 * voxel_dims[2],
-                );
 
-                if in_range(k + 1, 0, height) {
-                    neig[0] = !reg.is_covering(&grid[above], Bottom);
-                } else {
-                    neig[0] = cull_top;
-                }
-                if in_range(k, 1, t) {
-                    neig[1] = !reg.is_covering(&grid[below], Top);
-                } else {
-                    neig[1] = cull_bottom;
-                }
-                if in_range(i + 1, 0, width) {
-                    neig[2] = !reg.is_covering(&grid[right], Left);
-                } else {
-                    neig[2] = cull_right;
-                }
-                if in_range(i, 1, t) {
-                    neig[3] = !reg.is_covering(&grid[left], Right);
-                } else {
-                    neig[3] = cull_left;
-                }
-                if in_range(j + 1, 0, length) {
-                    neig[4] = !reg.is_covering(&grid[back], Forward);
-                } else {
-                    neig[4] = cull_back;
-                }
-                if in_range(j, 1, t) {
-                    neig[5] = !reg.is_covering(&grid[forward], Back);
-                } else {
-                    neig[5] = cull_forward;
-                }
+    for (voxel_pos, voxel) in grid.enumerate_blocks() {
+        let position_offset = Vec3::from(voxel_dims) * voxel_pos.as_vec3();
 
-                match meshing_algorithm {
-                    MeshingAlgorithm::Naive => neig = [true; 6],
-                    MeshingAlgorithm::Culling => {}
-                }
+        let sides_to_cull = match meshing_algorithm {
+            MeshingAlgorithm::Culling => grid.enumerate_neighbors(voxel_pos).map(|(f, n)| {
+                n.map_or_else(
+                    || outer_layers_to_call[f as usize],
+                    |t| !reg.is_covering(&t, f.opposite()),
+                )
+            }),
+            MeshingAlgorithm::Naive => [true; 6],
+        };
 
-                if neig == [false, false, false, false, false, false] {
-                    continue;
-                }
-                if in_range(cord, 0, t) {
-                    if let VoxelMesh::NormalCube(v_mesh) = reg.get_mesh(&grid[cord]) {
-                        // add_vertices_normal_cube() is a private function that adds the vertices and
-                        // indices to the running count of vertices and indices.
-                        add_vertices_normal_cube(
-                            neig,
-                            &mut indices,
-                            &mut vertices,
-                            v_mesh,
-                            &mut vivi,
-                            cord,
-                            center,
-                            position_offset,
-                        );
-                        rle_bool_voxel.push(true, 1);
-                    } else {
-                        rle_bool_voxel.push(false, 1);
-                    }
-                }
-            }
+        if sides_to_cull == [false; 6] {
+            continue;
+        }
+
+        if let VoxelMesh::NormalCube(voxel_mesh) = reg.get_mesh(&voxel) {
+            add_vertices_normal_cube(
+                sides_to_cull,
+                &mut indices,
+                &mut vertices,
+                voxel_mesh,
+                &mut vivi,
+                voxel_pos,
+                center,
+                position_offset.into(),
+                grid.dims,
+            );
         }
     }
 
@@ -157,8 +89,9 @@ pub fn mesh_grid<T>(
         mesh.insert_attribute(att, vals);
     }
     mesh.set_indices(Some(Indices::U32(indices)));
+
     let d_mesh = MeshMD {
-        dims,
+        dims: grid.dims,
         smooth_lighting_params,
         vivi,
         changed_voxels: vec![],
@@ -166,7 +99,7 @@ pub fn mesh_grid<T>(
 
     if let Some(t) = smooth_lighting_params {
         if t.apply_at_gen {
-            apply_smooth_lighting(reg, &mut mesh, &d_mesh, dims, 0, ch_len, grid);
+            apply_smooth_lighting(reg, &mut mesh, &d_mesh, grid.dims, 0, total_voxels, grid);
         }
     }
     Some((mesh, d_mesh))
@@ -182,9 +115,10 @@ fn add_vertices_normal_cube(
     vertices: &mut Vec<(MeshVertexAttribute, VertexAttributeValues)>,
     voxel: &Mesh,
     vivi: &mut VIVI,
-    voxel_index: usize,
+    voxel_pos: BlockPos,
     center: [f32; 3],
     position_offset: (f32, f32, f32),
+    dims: Dimensions,
 ) {
     let vertices_count = vertices[0].1.len();
     let pos_attribute = voxel
@@ -210,6 +144,7 @@ fn add_vertices_normal_cube(
     // part of one quad, we sort them this way to efficiently update the vivi.
     let mut final_vertices: Vec<u32> = vec![];
 
+    use Face::*;
     // iterate over all the triangles in the mesh
     for (a, b, c) in triangles {
         let v1 = positions[a as usize];
@@ -284,7 +219,11 @@ fn add_vertices_normal_cube(
                     final_vertices.push(i);
                     // update the vivi
                     if only_first {
-                        vivi.insert(face, voxel_index, i + vertices_count as u32 - offset);
+                        vivi.insert(
+                            face,
+                            pos_to_index(voxel_pos, dims).unwrap(),
+                            i + vertices_count as u32 - offset,
+                        );
                         only_first = false;
                     }
                 }

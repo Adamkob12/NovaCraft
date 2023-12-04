@@ -290,7 +290,7 @@ fn def_registries(input: &DeriveInput, enum_name: syn::Ident) -> TokenStream {
             }
 
             #[allow(unused_variables)]
-            fn is_covering(&self, voxel: &#enum_name, side: prelude::Face) -> bool {
+            fn is_covering(&self, voxel: &#enum_name, side: crate::prelude::Face) -> bool {
                 *voxel as u16 != 0 && *voxel != #enum_name::GREENERY
             }
         }

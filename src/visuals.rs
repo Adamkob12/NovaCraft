@@ -56,6 +56,7 @@ impl Plugin for VisualsPlugin {
     }
 }
 
+/// Set up fps counter in the bottom right of the screen
 fn setup_fps(mut commands: Commands, asset_server: Res<AssetServer>) {
     let font_handle = asset_server.load("fonts/main_font.ttf");
     commands.spawn((
@@ -76,6 +77,7 @@ fn setup_fps(mut commands: Commands, asset_server: Res<AssetServer>) {
     ));
 }
 
+/// Update the fps each frame
 fn fps_update(diagnostics: Res<DiagnosticsStore>, mut query: Query<&mut Text, With<FpsText>>) {
     for mut text in &mut query {
         if let Some(fps) = diagnostics.get(FrameTimeDiagnosticsPlugin::FPS) {

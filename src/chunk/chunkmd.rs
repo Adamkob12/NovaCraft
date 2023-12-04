@@ -1,36 +1,44 @@
-// Chunk meta-data
+// REFACTORED
+
+//! Chunk meta-data
 use super::*;
 
 #[derive(Component)]
-// CMMD = Chunk Mesh Meta Data
-pub struct CMMD(pub RwLock<ChunkMD>);
+/// [`SubChunkMD`] means "Chunk Meta Data". It holds the metadata of a subchunk in an [`RwLock`].
+pub struct SubChunkMD(pub RwLock<MetaData>);
 
-pub enum ChunkMD {
+/// Enum of all the possible subchunk metadatas
+pub enum MetaData {
     CubeMD(MeshMD<Block>),
     XSpriteMD(XSpriteMetaData<Block>),
 }
 
-impl ChunkMD {
-    pub fn log_break(&mut self, index: usize, adj_blocks: [Option<Block>; 6]) {
+impl MetaData {
+    /// Log the breaking of a block in the metadata.
+    pub fn log_break(&mut self, block_pos: BlockPos, adj_blocks: [Option<Block>; 6]) {
         match self {
             Self::CubeMD(meshmd) => {
-                meshmd.log(VoxelChange::Broken, index, Block::STONE, adj_blocks)
+                meshmd.log(VoxelChange::Broken, block_pos, Block::STONE, adj_blocks)
             }
             Self::XSpriteMD(xspritemd) => {
                 xspritemd
                     .log
-                    .push((VoxelChange::Broken, Block::GREENERY, index))
+                    .push((VoxelChange::Broken, Block::GREENERY, block_pos))
             }
         }
     }
 
-    pub fn log_place(&mut self, index: usize, block: Block, adj_blocks: [Option<Block>; 6]) {
+    /// Log the placing of a block in a metadata.
+    pub fn log_place(&mut self, block_pos: BlockPos, block: Block, adj_blocks: [Option<Block>; 6]) {
         match self {
-            Self::CubeMD(meshmd) => meshmd.log(VoxelChange::Added, index, block, adj_blocks),
-            Self::XSpriteMD(xspritemd) => xspritemd.log.push((VoxelChange::Added, block, index)),
+            Self::CubeMD(meshmd) => meshmd.log(VoxelChange::Added, block_pos, block, adj_blocks),
+            Self::XSpriteMD(xspritemd) => {
+                xspritemd.log.push((VoxelChange::Added, block, block_pos))
+            }
         }
     }
 
+    /// Get the metadata of the cube subchunk.
     pub fn extract_meshmd(&self) -> Option<&MeshMD<Block>> {
         match self {
             Self::CubeMD(meshmd) => Some(meshmd),
@@ -38,6 +46,7 @@ impl ChunkMD {
         }
     }
 
+    /// Get the metadata of the cube subchunk as a mut ref.
     pub fn extract_meshmd_mut(&mut self) -> Option<&mut MeshMD<Block>> {
         match self {
             Self::CubeMD(meshmd) => Some(meshmd),

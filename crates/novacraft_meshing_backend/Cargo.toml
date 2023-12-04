@@ -12,3 +12,4 @@ repository = "https://github.com/Adamkob12/NovaCraft"
 [dependencies]
 bevy = "0.12.0"
 rand = "0.8.5"
+novacraft_utils = { path = "../novacraft_utils" }

@@ -1,7 +1,8 @@
 pub mod controller;
-pub mod movement;
+mod misc_systems;
 
 use bevy_atmosphere::prelude::*;
+use misc_systems::*;
 use std::f32::consts::PI;
 
 use crate::chunk::{
@@ -21,25 +22,36 @@ use bevy::{
 use bevy_xpbd_3d::prelude::Collider;
 use bevy_xpbd_3d::prelude::*;
 pub use controller::*;
-use movement::*;
 
+/// We don't want the camera to be exactly where the player's collider is, because that's the
+/// center of the collider. This constant offsets the camera's position to match eye level.
 pub const CAMERA_HEIGHT_OFFSET: f32 = 0.45;
-pub const MAX_INTERACTION_DISTANCE: f32 = 7.0;
+/// The "reach" of the player, what is the largest distance from the player that a block can be and
+/// the player can break it / interact with it.
+pub const MAX_INTERACTION_DISTANCE: f32 = 6.0;
+/// Epsilon to offset a point by a little bit
 pub const SMALL_TRAVERSE: f32 = 0.001;
+/// Default Field of view
 pub const FOV: f32 = PI / 3.0;
 
+/// This component marks the entity of the player's camera.
 #[derive(Component)]
 pub struct PlayerCamera;
 
 /// Keeps track of mouse motion events, pitch, and yaw
 #[derive(Resource, Default)]
-struct InputState {
+pub struct InputState {
     reader_motion: ManualEventReader<MouseMotion>,
 }
 
+/// This component marks the entity of the player's physical entity, all of its physics related
+/// components are in the same entity. ([`Collider`], [`CollisionLayers`], [`GravityScale`], etc.)
 #[derive(Component)]
 pub struct PhysicalPlayer;
 
+/// The gamemode of a player, each gamemode allows the player different things, gives him different
+/// options. Foe example, [`Spectator`](PlayerGameMode::Spectator) allows him to fly through walls.
+/// Mostly parralel to Minecraft's gamemodes
 #[derive(Component)]
 pub enum PlayerGameMode {
     Creative,
@@ -54,12 +66,14 @@ impl PlayerGameMode {
     }
 }
 
+/// This resource represents the block that the player is currently looking at ("targeting")
+/// It's updated every frame using a [`RayCaster`]
 #[derive(Resource)]
 pub struct TargetBlock {
     pub ignore_flag: bool,
     pub target_entity: Entity,
     pub chunk_cords: ChunkCords,
-    pub block_index: usize,
+    pub block_pos: BlockPos,
     pub face_hit: Option<Face>,
     pub ray_direction: Vec3,
 }
@@ -70,6 +84,11 @@ pub struct MovementSettings {
     pub sensitivity: f32,
 }
 
+/// An enum of all the possible physics layers in the world. A [`PhysicsLayer`] is a physical
+/// attribute that allows [`Physical Queries made by the physics engine`](`SpatialQuery`) to filter
+/// out specific colliders. For example, the players shouldn't collide with grass, so we might
+/// filter out the grasses [`PhysicsLayer`] when setting up the [`player's collider`](Collider), but we still want the
+/// player to be able to break grass, so we will include its [`PhysicsLayer`] in the [`RayCaster`].
 #[repr(C)]
 #[derive(PhysicsLayer, Copy, Clone)]
 pub enum RigidLayer {
@@ -78,6 +97,19 @@ pub enum RigidLayer {
     Ground,
     GroundNonCollidable,
     GroundNonBreakable,
+}
+
+impl Default for TargetBlock {
+    fn default() -> Self {
+        TargetBlock {
+            ignore_flag: true,
+            target_entity: Entity::PLACEHOLDER,
+            chunk_cords: [0, 0].into(),
+            block_pos: [0, 0, 0].into(),
+            face_hit: None,
+            ray_direction: Vec3::ONE,
+        }
+    }
 }
 
 impl Default for MovementSettings {
@@ -89,7 +121,7 @@ impl Default for MovementSettings {
 }
 
 /// Spawns the `Camera3dBundle` to be controlled
-pub(super) fn setup_player(mut commands: Commands) {
+fn setup_player(mut commands: Commands) {
     let player_entity = commands
         .spawn(PhysicalPlayer)
         .insert(SpatialBundle {
@@ -166,33 +198,32 @@ fn update_target_block(
             let face = {
                 let mut to_return = None;
                 if ray_hit.normal == Vec3::Y {
-                    to_return = Some(Top);
+                    to_return = Some(Face::Top);
                 }
                 if ray_hit.normal == Vec3::NEG_Y {
-                    to_return = Some(Bottom);
+                    to_return = Some(Face::Bottom);
                 }
                 if ray_hit.normal == Vec3::X {
-                    to_return = Some(Right);
+                    to_return = Some(Face::Right);
                 }
                 if ray_hit.normal == Vec3::NEG_X {
-                    to_return = Some(Left);
+                    to_return = Some(Face::Left);
                 }
                 if ray_hit.normal == Vec3::Z {
-                    to_return = Some(Back);
+                    to_return = Some(Face::Back);
                 }
                 if ray_hit.normal == Vec3::NEG_Z {
-                    to_return = Some(Forward);
+                    to_return = Some(Face::Forward);
                 }
                 to_return
             };
             let impact_point = pos + ray_hit.time_of_impact * forward + SMALL_TRAVERSE * forward;
-            let (chunk_cords, block_index, _) =
-                position_to_chunk_position(impact_point, CHUNK_DIMS);
+            let global_pos = point_to_global_block_pos(impact_point, CHUNK_DIMS);
             *target_block = TargetBlock {
                 ignore_flag: false,
                 target_entity: ray_hit.entity,
-                chunk_cords,
-                block_index: one_d_cords(block_index, CHUNK_DIMS),
+                chunk_cords: global_pos.chunk_cords,
+                block_pos: global_pos.pos,
                 face_hit: face,
                 ray_direction: forward,
             };
@@ -201,44 +232,6 @@ fn update_target_block(
         }
     }
 }
-
-// Keeps track of the blocks surrounding the player for physics
-/// Grabs/ungrabs mouse cursor
-fn toggle_grab_cursor(window: &mut Window) {
-    match window.cursor.grab_mode {
-        CursorGrabMode::None => {
-            window.cursor.grab_mode = CursorGrabMode::Confined;
-            window.cursor.visible = false;
-        }
-        _ => {
-            window.cursor.grab_mode = CursorGrabMode::None;
-            window.cursor.visible = true;
-        }
-    }
-}
-
-/// Grabs the cursor when game first starts
-fn initial_grab_cursor(mut primary_window: Query<&mut Window, With<PrimaryWindow>>) {
-    if let Ok(mut window) = primary_window.get_single_mut() {
-        toggle_grab_cursor(&mut window);
-    } else {
-        warn!("Primary window not found for `initial_grab_cursor`!");
-    }
-}
-
-fn cursor_grab(
-    keys: Res<Input<KeyCode>>,
-    mut primary_window: Query<&mut Window, With<PrimaryWindow>>,
-) {
-    if let Ok(mut window) = primary_window.get_single_mut() {
-        if keys.just_pressed(KeyCode::Escape) {
-            toggle_grab_cursor(&mut window);
-        }
-    } else {
-        warn!("Primary window not found for `cursor_grab`!");
-    }
-}
-
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
@@ -248,7 +241,7 @@ impl Plugin for PlayerPlugin {
             .init_resource::<MovementSettings>()
             .init_resource::<TargetBlock>()
             .init_resource::<LastPressedKeys>()
-            .insert_resource(CurrentChunk([0, 0]))
+            .insert_resource(CurrentChunk([0, 0].into()))
             .add_systems(Startup, initial_grab_cursor)
             .add_systems(
                 Update,
@@ -270,27 +263,4 @@ impl Plugin for PlayerPlugin {
     }
 }
 
-fn update_current_chunk(
-    mut current_chunk: ResMut<CurrentChunk>,
-    player: Query<&Transform, With<PhysicalPlayer>>,
-) {
-    if let Ok(t) = player.get_single() {
-        let tmp = position_to_chunk(t.translation, CHUNK_DIMS);
-        if tmp != current_chunk.0 {
-            current_chunk.0 = tmp;
-        }
-    }
-}
-
-impl Default for TargetBlock {
-    fn default() -> Self {
-        TargetBlock {
-            ignore_flag: true,
-            target_entity: Entity::PLACEHOLDER,
-            chunk_cords: [0, 0],
-            block_index: 0,
-            face_hit: None,
-            ray_direction: Vec3::ONE,
-        }
-    }
-}
+//

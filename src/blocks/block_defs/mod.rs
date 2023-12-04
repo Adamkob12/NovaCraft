@@ -1,3 +1,5 @@
+// REFACTORED
+
 #![allow(dead_code)]
 use super::{
     block_descriptor::*,
@@ -7,6 +9,7 @@ use super::{
     Block, Face,
 };
 
+// Describe each block
 #[allow(non_snake_case)]
 impl BlockDescriptor {
     pub fn Air() -> Self {
