@@ -27,7 +27,6 @@ pub mod terrain;
 pub mod utils;
 pub mod visuals;
 
-#[allow(unused_imports)]
 use bevy::{pbr::wireframe::WireframePlugin, window::WindowResolution};
 use bevy_xpbd_3d::prelude::*;
 use prelude::*;

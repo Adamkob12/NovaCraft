@@ -5,7 +5,7 @@ use crate::{blocks::meshreg::MeshRegistry, utils::chunk_distance};
 
 use super::{
     chunk_queue::ChunkQueue,
-    chunkmd::{ChunkMD, CMMD},
+    chunkmd::{MetaData, SubChunkMD},
     *,
 };
 
@@ -43,13 +43,13 @@ pub fn queue_spawn_despawn_chunks(
 pub fn dequeue_all_chunks(
     commands: Commands,
     mut chunk_map: ResMut<ChunkMap>,
-    breg: Res<MeshRegistry>,
+    mreg: Res<MeshRegistry>,
     mut chunk_queue: ResMut<ChunkQueue>,
     current_chunk: Res<CurrentChunk>,
     render_settings: Res<RenderSettings>,
     terrain_config: Res<TerrainConfig>,
 ) {
-    let breg = Arc::new(breg.into_inner().to_owned());
+    let breg = Arc::new(mreg.into_inner().to_owned());
     chunk_queue.dequeue_all(
         &mut chunk_map,
         commands,
@@ -98,10 +98,10 @@ pub fn handle_chunk_spawn_tasks(
                 let culled_mesh_child = commands
                     .spawn((
                         // MainCulledMesh(metadata.into()),
-                        CMMD(ChunkMD::CubeMD(metadata).into()),
-                        CubeChunk,
-                        ChunkPhysicalProperties(vec![crate::player::RigidLayer::Ground]),
-                        ChunkChild,
+                        SubChunkMD(MetaData::CubeMD(metadata).into()),
+                        CubeSubChunk,
+                        ChunkRigidLayers(vec![crate::player::RigidLayer::Ground]),
+                        Subchunk,
                         PbrBundle {
                             mesh: culled_mesh_handle,
                             material: blocks_mat.0.clone(),
@@ -116,19 +116,17 @@ pub fn handle_chunk_spawn_tasks(
                             material: xsprite_mat.0.clone(),
                             ..Default::default()
                         },
-                        ChunkPhysicalProperties(vec![
-                            crate::player::RigidLayer::GroundNonCollidable,
-                        ]),
-                        ChunkChild,
+                        ChunkRigidLayers(vec![crate::player::RigidLayer::GroundNonCollidable]),
+                        Subchunk,
                         // XSpriteMesh(RwLock::new(data)),
-                        CMMD(ChunkMD::XSpriteMD(data).into()),
-                        XSpriteChunk,
+                        SubChunkMD(MetaData::XSpriteMD(data).into()),
+                        XSpriteSubChunk,
                     ))
                     .id();
                 let entity = commands
                     .spawn((
-                        Chunk,
-                        MainChild(culled_mesh_child),
+                        ParentChunk,
+                        CubeChild(culled_mesh_child),
                         XSpriteChild(xsprite_mesh_child),
                         Grid(Arc::new(RwLock::new(grid))),
                         AdjChunkGrids {

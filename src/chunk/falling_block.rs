@@ -1,25 +1,29 @@
-use bevy_xpbd_3d::prelude::ShapeHits;
-
-use crate::action::{properties::FallingBlock, PlaceBlockGlobalEvent};
+// REFACTORED
 
 use super::*;
-
 use crate::action::VOXEL_DIMS;
+use crate::action::{properties::FallingBlock, PlaceBlockGlobalEvent};
 use crate::player::RigidLayer;
+use bevy_xpbd_3d::prelude::ShapeHits;
 use bevy_xpbd_3d::prelude::*;
 
+/// System to track the falling blocks in the world, place them as proper blocks in they hit the
+/// ground.
 pub fn follow_falling_block(
     mut commands: Commands,
     falling_blocks: Query<(Entity, &ShapeHits, &Block, &Transform, &FallingBlock)>,
     mut global_block_place_event_sender: EventWriter<PlaceBlockGlobalEvent>,
 ) {
-    for (entity, hits, block, transform, FallingBlock { origin }) in falling_blocks.iter() {
+    for (falling_block_entity, hits, block, transform, FallingBlock { origin }) in
+        falling_blocks.iter()
+    {
         if !hits.is_empty() {
             let BlockGlobalPos {
                 chunk_cords,
                 pos: block_pos,
                 valid: flag,
             } = point_to_global_block_pos(transform.translation + Vec3::Y * 0.1, CHUNK_DIMS);
+            // Only place the falling block if its in a valid place (not the origin & in bounds)
             if flag && block_pos != *origin {
                 info!(
                     "Falling block collision, at chunk: {:?} at position: {}, by block: {:?}",
@@ -30,12 +34,13 @@ pub fn follow_falling_block(
                     chunk_cords,
                     block_pos,
                 });
-                commands.entity(entity).despawn();
+                commands.entity(falling_block_entity).despawn();
             }
         }
     }
 }
 
+/// Side helper function to handle the spawning of the Falling block
 pub(super) fn spawn_falling_block(
     commands: &mut Commands,
     mesh_handle: Handle<Mesh>,

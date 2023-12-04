@@ -1,11 +1,15 @@
+// REFACTORED
+
 use bevy::pbr::wireframe::WireframeConfig;
 
 use crate::action::PhysicalPlayer;
 use crate::blocks::Block;
-use crate::chunk::{Chunk, ChunkChild, Grid, LENGTH, WIDTH};
+use crate::chunk::{Grid, ParentChunk, Subchunk, LENGTH, WIDTH};
 
 use super::*;
 
+/// Debug mode is a toggleable mode that if on displays all kinds of debugging data, parallel to
+/// Minecraft's "F3 mode".
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Debug, Default, States)]
 pub(super) enum DebugMode {
     On,
@@ -154,8 +158,8 @@ pub(super) fn update_debug_ui(
     mut debug_ui_text: Query<(&DebugModeText, &mut Text)>,
     player_query: Query<&Transform, With<PhysicalPlayer>>,
     target_block: Res<TargetBlock>,
-    grids_query: Query<&Grid, With<Chunk>>,
-    parents_query: Query<&Parent, With<ChunkChild>>,
+    grids_query: Query<&Grid, With<ParentChunk>>,
+    parents_query: Query<&Parent, With<Subchunk>>,
 ) {
     for (DebugModeText(debug_text_type), mut text) in debug_ui_text.iter_mut() {
         match debug_text_type {

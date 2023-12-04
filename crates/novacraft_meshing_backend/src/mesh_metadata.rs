@@ -94,7 +94,7 @@ pub struct MeshMD<T> {
     // u32: the index of the voxel in the grid,
     // ChangeInVoxel: whether the voxel was added or removed,
     // [Option<T>; 6]: the neighbors of the voxel, in the same order as
-    //    in the `Neighbors` data-type, if the voxel is "empty"- None.
+    // in the `Neighbors` data-type, if the voxel is "empty"- None.
     pub(crate) changed_voxels: Vec<(T, BlockPos, VoxelChange, [Option<T>; 6])>,
 }
 

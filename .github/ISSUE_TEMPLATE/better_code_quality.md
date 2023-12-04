@@ -10,6 +10,6 @@ assignees: ''
 
 (Example): Use par-iter instead of iter in these types of systems.
 
-## Which general code / project managment convention could be improved?
+## Which general code / project management convention could be improved?
 
 Different files structuring system / naming conventions, etc.

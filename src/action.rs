@@ -16,31 +16,7 @@ pub use place_blocks::*;
 
 pub struct ActionPlugin;
 
-impl Plugin for ActionPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_event::<PrimeAction>()
-            .add_event::<SecondAction>()
-            .add_event::<BlockPlaceEvent>()
-            .add_event::<PlaceBlockGlobalEvent>()
-            .add_event::<BreakBlockGlobalEvent>()
-            .init_resource::<ActionKeyBinds>()
-            .add_systems(
-                PreUpdate,
-                (
-                    broadcast_actions,
-                    sort_actions,
-                    follow_falling_block,
-                    (handle_place_block_event, global_block_breaker),
-                    global_block_placer,
-                    handle_block_updates,
-                    apply_deferred,
-                )
-                    .run_if(any_with_component::<PlayerCamera>())
-                    .chain(),
-            );
-    }
-}
-
+/// Start of stop the action
 #[derive(Event)]
 pub enum ActionType {
     Start,
@@ -55,7 +31,7 @@ pub struct ActionKeyBinds {
 
 #[derive(Event)]
 pub struct PrimeAction {
-    // In millies from start
+    /// In millies from start
     #[allow(dead_code)]
     time_stamp: u128,
     action_type: ActionType,
@@ -69,6 +45,7 @@ pub struct SecondAction {
     action_type: ActionType,
 }
 
+/// Broadcast actions from keyboard input
 fn broadcast_actions(
     mut prime_action: EventWriter<PrimeAction>,
     mut second_action: EventWriter<SecondAction>,
@@ -104,23 +81,26 @@ fn broadcast_actions(
     }
 }
 
+/// Handle incoming general action events (from [`broadcast_actions`]) and sort them into specific actions.
+/// For example:
+/// Recieve [`SecondAction`] --> Get the block that the player was holding when he started the action & get the position
+/// of the to-be placed block form [`TargetBlock`] --> Send [`BlockPlaceEvent`] with that information
 fn sort_actions(
     target_block: Res<TargetBlock>,
     mut prime_action_reader: EventReader<PrimeAction>,
     mut second_action_reader: EventReader<SecondAction>,
     mut break_block_global_sender: EventWriter<BreakBlockGlobalEvent>,
     mut place_block_writer: EventWriter<BlockPlaceEvent>,
-    inv: Res<Inventory>,
+    inventory: Res<Inventory>,
 ) {
     for prime_action in prime_action_reader.read() {
         if matches!(prime_action.action_type, ActionType::Start)
             && target_block.ignore_flag == false
         {
-            break_block_global_sender.send(BreakBlockGlobalEvent {
-                chunk_entity: Some(target_block.target_entity),
-                chunk_cords: None,
-                block_pos: target_block.block_pos,
-            });
+            break_block_global_sender.send(BreakBlockGlobalEvent::from_entity_and_pos(
+                target_block.block_pos,
+                target_block.target_entity,
+            ));
         }
     }
     for second_action in second_action_reader.read() {
@@ -130,7 +110,7 @@ fn sort_actions(
             if target_block.face_hit.is_none() {
                 continue;
             }
-            if let Some(block) = inv.get_current() {
+            if let Some(block) = inventory.get_current() {
                 place_block_writer.send(BlockPlaceEvent(
                     target_block.target_entity,
                     target_block.block_pos,
@@ -142,29 +122,36 @@ fn sort_actions(
     }
 }
 
-pub fn send_world_updates_surrounding_blocks(
-    block_pos: BlockPos,
-    chunk_cords: ChunkCords,
-    world_block_update_sender: &mut EventWriter<WorldBlockUpdate>,
-    block_update: BlockUpdate,
-) {
-    let global_pos = BlockGlobalPos::new(block_pos, chunk_cords);
-    for (_face, neighbor_global_pos) in global_enumerate_neighboring_blocks(global_pos, CHUNK_DIMS)
-    {
-        world_block_update_sender.send(WorldBlockUpdate::from_global_pos(neighbor_global_pos));
-    }
-    world_block_update_sender.send(WorldBlockUpdate {
-        block_pos,
-        chunk_cords,
-        block_update: Some(block_update),
-    });
-}
-
 impl Default for ActionKeyBinds {
     fn default() -> Self {
         ActionKeyBinds {
             prime_action: MouseButton::Left,
             second_action: MouseButton::Right,
         }
+    }
+}
+
+impl Plugin for ActionPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_event::<PrimeAction>()
+            .add_event::<SecondAction>()
+            .add_event::<BlockPlaceEvent>()
+            .add_event::<PlaceBlockGlobalEvent>()
+            .add_event::<BreakBlockGlobalEvent>()
+            .init_resource::<ActionKeyBinds>()
+            .add_systems(
+                PreUpdate,
+                (
+                    broadcast_actions,
+                    sort_actions,
+                    follow_falling_block,
+                    (handle_place_block_event, global_block_breaker),
+                    global_block_placer,
+                    handle_block_updates,
+                    apply_deferred,
+                )
+                    .run_if(any_with_component::<PlayerCamera>())
+                    .chain(),
+            );
     }
 }

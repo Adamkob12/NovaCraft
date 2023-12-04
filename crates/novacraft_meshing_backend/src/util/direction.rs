@@ -14,6 +14,8 @@ pub enum Direction {
 }
 use Direction::*;
 
+pub const DIRECTIONS: [Direction; 8] = [North, South, East, West, NoEast, NoWest, SoEast, SoWest];
+
 impl Into<&'static str> for Direction {
     fn into(self) -> &'static str {
         match self {

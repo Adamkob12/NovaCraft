@@ -1,7 +1,10 @@
+// REFACTORED
+
 use bevy::window::PrimaryWindow;
 
 use crate::prelude::*;
 
+/// Visual configuration of the crosshair
 #[derive(Resource)]
 pub struct CrossHairConfig {
     color: Color,
@@ -25,37 +28,39 @@ impl Default for CrossHairConfig {
     }
 }
 
+/// Marker component for the crosshair
 #[derive(Component)]
 pub struct Crosshair;
 
+/// Setup the crosshair according to the configuration.
 pub(super) fn setup_crosshair(
-    ch_config: Res<CrossHairConfig>,
+    crosshair_config: Res<CrossHairConfig>,
     mut commands: Commands,
     window: Query<&Window, With<PrimaryWindow>>,
     current_crosshair: Query<Entity, With<Crosshair>>,
 ) {
-    if let Ok(crosshair) = current_crosshair.get_single() {
-        commands.entity(crosshair).despawn();
+    if let Ok(current_crosshair) = current_crosshair.get_single() {
+        commands.entity(current_crosshair).despawn();
     }
     if let Ok(window) = window.get_single() {
         let (window_width, window_height) = (window.resolution.width(), window.resolution.height());
         commands.spawn(Crosshair);
-        match ch_config.style {
+        match crosshair_config.style {
             CrossHairStyle::Cross => {
                 commands.spawn(
                     TextBundle::from_section(
                         format!("+"),
                         TextStyle {
-                            font_size: ch_config.size,
-                            color: ch_config.color,
+                            font_size: crosshair_config.size,
+                            color: crosshair_config.color,
                             ..default()
                         },
                     )
                     .with_style(Style {
                         position_type: PositionType::Absolute,
                         align_items: AlignItems::Center,
-                        top: Val::Px(window_height / 2.0 - ch_config.size / 2.0),
-                        left: Val::Px(window_width / 2.0 - ch_config.size / 2.0),
+                        top: Val::Px(window_height / 2.0 - crosshair_config.size / 2.0),
+                        left: Val::Px(window_width / 2.0 - crosshair_config.size / 2.0),
                         ..default()
                     }),
                 );
@@ -65,16 +70,16 @@ pub(super) fn setup_crosshair(
                     TextBundle::from_section(
                         format!("."),
                         TextStyle {
-                            font_size: ch_config.size,
-                            color: ch_config.color,
+                            font_size: crosshair_config.size,
+                            color: crosshair_config.color,
                             ..default()
                         },
                     )
                     .with_style(Style {
                         position_type: PositionType::Absolute,
                         align_items: AlignItems::Center,
-                        top: Val::Px(window_height / 2.0 - ch_config.size / 2.0),
-                        left: Val::Px(window_width / 2.0 - ch_config.size / 2.0),
+                        top: Val::Px(window_height / 2.0 - crosshair_config.size / 2.0),
+                        left: Val::Px(window_width / 2.0 - crosshair_config.size / 2.0),
                         ..default()
                     }),
                 );

@@ -26,16 +26,20 @@ use rand::prelude::*;
 use spawn::*;
 use update_chunks::*;
 
-// Number of blocks along the y axis
+/// Number of blocks along the y axis
 pub const HEIGHT: u32 = 56;
-// Number of blocks along the z axis
+/// Number of blocks along the z axis
 pub const LENGTH: u32 = 16;
-// Number of blocks along the x axis
+/// Number of blocks along the x axis
 pub const WIDTH: u32 = 16;
+/// The dimensions of a chunk
 pub const CHUNK_DIMS: UVec3 = UVec3::new(WIDTH, HEIGHT, LENGTH);
+/// Total blocks that fit in one chunk
 pub const CHUNK_TOTAL_BLOCKS: u32 = HEIGHT * LENGTH * WIDTH;
+pub const CHUNK_TOTAL_BLOCKS_USIZE: usize = CHUNK_TOTAL_BLOCKS as usize;
+/// Render distance in chunks
 pub const RENDER_DISTANCE: i32 = 12;
-
+/// Default [`SmoothLightingParameters`]
 pub const DEFAULT_SL: Option<SmoothLightingParameters> = Some(SmoothLightingParameters {
     intensity: 0.37,
     max: 0.95,
@@ -43,86 +47,114 @@ pub const DEFAULT_SL: Option<SmoothLightingParameters> = Some(SmoothLightingPara
     apply_at_gen: false,
 });
 
-pub const CHUNK_TOTAL_BLOCKS_USIZE: usize = CHUNK_TOTAL_BLOCKS as usize;
-pub type ChunkArr = ChunkGrid<Block, CHUNK_TOTAL_BLOCKS_USIZE>;
-pub const EMPTY_CHUNK: ChunkArr =
+/// The type used for the actual grid of a chunk. Defined in [`novacraft_utils`]
+pub type ChunkGrid = crate::prelude::ChunkGrid<Block, CHUNK_TOTAL_BLOCKS_USIZE>;
+pub const EMPTY_CHUNK: ChunkGrid =
     ChunkGrid::new([Block::AIR; CHUNK_TOTAL_BLOCKS as usize], CHUNK_DIMS);
 
 pub type ChunkCords = crate::prelude::ChunkCords;
 
+/// The coordniates of a chunk
 #[derive(Component)]
 pub struct Cords(pub ChunkCords);
 
+/// "Cube" refers to the type of subchunk. The component is added to the parent chunk.
 #[derive(Component)]
-pub struct MainChild(pub Entity);
+pub struct CubeChild(pub Entity);
 
+/// "XSprite" refers to the type of subchunk. The component is added to the parent chunk.
 #[derive(Component)]
 pub struct XSpriteChild(pub Entity);
 
+/// Marker component to singal that the entity is a subchunk (child of a parent chunk)
+/// This parent-child heirerchy is necessery because each there are many types of blocks,
+/// and it doesn't often go well when they are all in the same mesh, with the same material.
 #[derive(Component)]
-pub struct ChunkChild;
+pub struct Subchunk;
 
+/// Component to mark chunks that are close to the player (with 1 chunk away)
 #[derive(Component)]
 pub struct CloseChunk;
 
+/// Component used to mark a chunk that needs to "connect" to its adjecant chunks. This means
+/// setting up its [`AdjChunkGrids`] (may be removed in the future)
 #[derive(Component)]
 pub struct ToConnect;
 
+/// This component is inserted to a parent chunk when its `Smooth Lighting` needs to be updated.
+/// [`The first value`](ToApplySL::0) is the lower bound
+/// [`The first value`](ToApplySL::1) is the upper bound
+/// The y cord of the positions where the changes in the chunk occured must be between the bounds' y cord.
 #[derive(Component)]
 pub struct ToApplySL(pub BlockPos, pub BlockPos);
 
+/// The groups of a chunk (within the context of [`bevy_xpbd_3d`] [`collision layers`](bevy_xpbd_3d::CollisionLayers)
 #[derive(Component)]
-pub struct ChunkPhysicalProperties(Vec<crate::player::RigidLayer>);
+pub struct ChunkRigidLayers(Vec<crate::player::RigidLayer>);
 
+/// A read only thread safe smart pointer [`Arc`]<[`RwLock`]> to the grids of adjecant chunks.
 #[derive(Component)]
 pub struct AdjChunkGrids {
     // +z
-    pub north: Option<Arc<RwLock<ChunkArr>>>,
+    pub north: Option<Arc<RwLock<ChunkGrid>>>,
     // -z
-    pub south: Option<Arc<RwLock<ChunkArr>>>,
+    pub south: Option<Arc<RwLock<ChunkGrid>>>,
     // +x
-    pub east: Option<Arc<RwLock<ChunkArr>>>,
+    pub east: Option<Arc<RwLock<ChunkGrid>>>,
     // -x
-    pub west: Option<Arc<RwLock<ChunkArr>>>,
+    pub west: Option<Arc<RwLock<ChunkGrid>>>,
     // +z
-    pub no_east: Option<Arc<RwLock<ChunkArr>>>,
+    pub no_east: Option<Arc<RwLock<ChunkGrid>>>,
 
-    pub no_west: Option<Arc<RwLock<ChunkArr>>>,
+    pub no_west: Option<Arc<RwLock<ChunkGrid>>>,
 
-    pub so_east: Option<Arc<RwLock<ChunkArr>>>,
+    pub so_east: Option<Arc<RwLock<ChunkGrid>>>,
 
-    pub so_west: Option<Arc<RwLock<ChunkArr>>>,
+    pub so_west: Option<Arc<RwLock<ChunkGrid>>>,
 }
 
+/// A read and write thread safe smart pointer [`Arc`]<[`RwLock`]> to the grids of adjecant chunks.
 #[derive(Component)]
-pub struct Grid(pub Arc<RwLock<ChunkArr>>);
+pub struct Grid(pub Arc<RwLock<ChunkGrid>>);
 
+/// This component marks that an entity is a parent chunk. Meaning it contains all the information
+/// about the chunk, and its children are "subchunks", they contain the information about their
+/// respective meshes and materials and metadata.
 #[derive(Component)]
-pub struct Chunk;
+pub struct ParentChunk;
 
+/// This component marks that a subchunk needs to update its mesh.
 #[derive(Component)]
 pub struct ToUpdate;
 
+/// This component contains information about the chunks it needs to be introduced to.
+/// "Introduced" means cull the unneeded vertices in the intersetion between two chunks.
 #[derive(Component)]
 pub struct ToIntroduce(pub Vec<(ChunkCords, Direction)>);
 
+/// This component marks a cube type subchunk
 #[derive(Component)]
-pub struct CubeChunk;
+pub struct CubeSubChunk;
 
+/// This component marks an xsprite type subchunk
 #[derive(Component)]
-pub struct XSpriteChunk;
+pub struct XSpriteSubChunk;
 
+/// Resource containing the handle to the material of most blocks
 #[derive(Resource)]
 pub struct BlockMaterial(Handle<StandardMaterial>);
 
+/// Resource containing the handle to the material of xsprite blocks
 #[derive(Resource)]
 pub struct XSpriteMaterial(Handle<StandardMaterial>);
 
+/// Resource that maps a chunk's cords to its entity
 #[derive(Resource, Default)]
 pub struct ChunkMap {
     pub pos_to_ent: HashMap<ChunkCords, Entity>,
 }
 
+/// Resource containing the cords of the chunk the player is currently in
 #[derive(Resource, PartialEq)]
 pub struct CurrentChunk(pub ChunkCords);
 
@@ -144,20 +176,23 @@ impl Plugin for ChunkPlugin {
             })
             .insert_resource(ChunkMap {
                 pos_to_ent: bevy::utils::hashbrown::HashMap::with_capacity(
-                    (RENDER_DISTANCE * RENDER_DISTANCE) as usize,
+                    (RENDER_DISTANCE * RENDER_DISTANCE + 1) as usize,
                 ),
             })
             .init_resource::<ChunkQueue>()
             .insert_resource(LockChunkUpdate::unlocked());
         app.add_systems(
             PreUpdate,
-            (reload_all.run_if(
+            // If the render settings have been changed, we need to despawn all chunks (they will
+            // be reloaded thereafter with the new render settings)
+            (despawn_all_chunks.run_if(
                 resource_changed::<RenderSettings>().or_else(resource_changed::<TerrainConfig>()),
             ),),
         );
         app.add_systems(
             Update,
             (
+                // The pipeline of spawning and despawning chunks
                 queue_spawn_despawn_chunks,
                 dequeue_all_chunks.run_if(resource_changed::<ChunkQueue>()),
                 handle_chunk_spawn_tasks,
@@ -166,6 +201,7 @@ impl Plugin for ChunkPlugin {
                     .chain().run_if(resource_equals(LockChunkUpdate::unlocked())),
             ).run_if(in_state(AssetLoadingState::Loaded)),
         )
+            // More misc systems 
         .add_systems(PostUpdate, (update_close_chunks, insert_collider_for_close_chunks))
         .add_systems(
             PostUpdate,
@@ -205,7 +241,7 @@ fn setup_texture(
 }
 
 impl AdjChunkGrids {
-    pub fn get_grid_at_direction(&self, dir: crate::prelude::Direction) -> &Arc<RwLock<ChunkArr>> {
+    pub fn get_grid_at_direction(&self, dir: crate::prelude::Direction) -> &Arc<RwLock<ChunkGrid>> {
         let grid_to_return = match dir {
             North if self.north.is_some() => self.north.as_ref().unwrap(),
             South if self.south.is_some() => self.north.as_ref().unwrap(),
