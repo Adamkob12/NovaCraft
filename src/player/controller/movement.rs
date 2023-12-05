@@ -1,19 +1,16 @@
-// REFACTORED
-
 use super::*;
-use super::{PhysicalPlayer, PlayerGameMode, CAMERA_HEIGHT_OFFSET, FOV};
+use super::{PlayerGameMode, CAMERA_HEIGHT_OFFSET, FOV};
 use crate::player::*;
 use bevy::{ecs::query::Has, prelude::*, utils::HashMap, utils::Instant};
 use bevy_xpbd_3d::{math::*, prelude::*};
 
 /// Sends [`MovementAction`] events based on keyboard input.
 pub(super) fn keyboard_input(
+    mut commands: Commands,
     mut movement_event_writer: EventWriter<MovementAction>,
     keyboard_input: Res<Input<KeyCode>>,
-    mut camera_query: Query<(&mut Projection, &mut Transform), With<PlayerCamera>>,
-    mut speed_query: Query<&mut Speed>,
-    mut physical_player: Query<&mut FlyMode, With<PhysicalPlayer>>,
-    player_game_mode: Query<&PlayerGameMode>,
+    camera_query: Query<&Transform, With<PlayerCamera>>,
+    gamemode_query: Query<(Entity, &PlayerGameMode, Has<FlyMode>)>,
     mut press_history: ResMut<LastPressedKeys>,
 ) {
     let up = keyboard_input.any_pressed([KeyCode::W, KeyCode::Up]);
@@ -22,73 +19,70 @@ pub(super) fn keyboard_input(
     let right = keyboard_input.any_pressed([KeyCode::D, KeyCode::Right]);
 
     let mut direction = Vec3::ZERO;
-    if let Ok((_, tran)) = camera_query.get_single() {
+    let mut pressed_keys = vec![];
+    if let Ok(tran) = camera_query.get_single() {
         let horizontal = (right as i8 - left as i8) as f32 * tran.right();
         let vertical = (up as i8 - down as i8) as f32 * tran.forward();
         direction = horizontal + vertical;
         direction.y = 0.0;
         direction = direction.normalize_or_zero();
     }
-
     if direction != Vec3::ZERO {
         movement_event_writer.send(MovementAction::Move(direction));
+    } else {
+        movement_event_writer.send(MovementAction::Nop);
     }
 
     if keyboard_input.pressed(KeyCode::Space) {
         movement_event_writer.send(MovementAction::Jump);
-        // Handle double-click on space bar for fly mode
-        if player_game_mode.get_single().unwrap().can_fly() {
+        pressed_keys.push(KeyCode::Space);
+    }
+    if keyboard_input.pressed(KeyCode::ControlLeft) {
+        pressed_keys.push(KeyCode::ControlLeft);
+    }
+    if keyboard_input.pressed(KeyCode::ShiftLeft) {
+        pressed_keys.push(KeyCode::ShiftLeft);
+    }
+    if keyboard_input.just_pressed(KeyCode::Space) {
+        if let Ok((player_entity, player_game_mode, is_flying)) = gamemode_query.get_single() {
             if let Some(last_press) = press_history.map.get(&KeyCode::Space) {
                 if last_press.elapsed().as_secs_f32() <= DOUBLE_CLICK_MAX_SEP_TIME {
-                    physical_player
-                        .iter_mut()
-                        .for_each(|mut flymode| flymode.toggle());
+                    if is_flying && !player_game_mode.must_fly() {
+                        commands.entity(player_entity).remove::<FlyMode>();
+                    }
+                    if !is_flying && player_game_mode.can_fly() {
+                        commands.entity(player_entity).insert(FlyMode);
+                    }
                 }
-                press_history.map.insert(KeyCode::Space, Instant::now());
             }
         }
     }
-
-    // Sprint, Crouch
+    if keyboard_input.just_pressed(KeyCode::ControlLeft) {
+        movement_event_writer.send(MovementAction::CrouchStart);
+    }
+    if keyboard_input.just_released(KeyCode::ControlLeft) {
+        movement_event_writer.send(MovementAction::CrouchStop);
+    }
     if keyboard_input.just_pressed(KeyCode::ShiftLeft) {
-        if let (Ok((mut projection, _)), Ok(mut speed)) =
-            (camera_query.get_single_mut(), speed_query.get_single_mut())
-        {
-            if let Projection::Perspective(ref mut perspective) = *projection {
-                perspective.fov = FOV * 1.06;
-            }
-            speed.0 = SPEED * 1.5;
-            return;
-        }
-    } else if keyboard_input.just_released(KeyCode::ShiftLeft) {
-        if let (Ok((mut projection, _)), Ok(mut speed)) =
-            (camera_query.get_single_mut(), speed_query.get_single_mut())
-        {
-            if let Projection::Perspective(ref mut perspective) = *projection {
-                perspective.fov = FOV;
-            }
-            speed.0 = SPEED;
-        }
-    } else if keyboard_input.just_pressed(KeyCode::ControlLeft) {
-        if let (Ok((mut projection, mut tran)), Ok(mut speed)) =
-            (camera_query.get_single_mut(), speed_query.get_single_mut())
-        {
-            if let Projection::Perspective(ref mut perspective) = *projection {
-                perspective.fov = FOV * 0.97;
-            }
-            speed.0 = SPEED / 1.5;
-            tran.translation.y = CAMERA_HEIGHT_OFFSET / 3.0;
-        }
-    } else if keyboard_input.just_released(KeyCode::ControlLeft) {
-        if let (Ok((mut projection, mut tran)), Ok(mut speed)) =
-            (camera_query.get_single_mut(), speed_query.get_single_mut())
-        {
-            if let Projection::Perspective(ref mut perspective) = *projection {
-                perspective.fov = FOV;
-            }
-            speed.0 = SPEED;
-            tran.translation.y = CAMERA_HEIGHT_OFFSET;
-        }
+        movement_event_writer.send(MovementAction::SprintStart);
+    }
+    if keyboard_input.just_released(KeyCode::ShiftLeft) {
+        movement_event_writer.send(MovementAction::SprintStop);
+    }
+    if up {
+        pressed_keys.push(KeyCode::W);
+    }
+    if down {
+        pressed_keys.push(KeyCode::S);
+    }
+    if left {
+        pressed_keys.push(KeyCode::A);
+    }
+    if right {
+        pressed_keys.push(KeyCode::D);
+    }
+    for key in pressed_keys {
+        press_history.map.insert(key, Instant::now());
     }
 }
 
@@ -97,7 +91,7 @@ pub(super) fn update_grounded(
     mut commands: Commands,
     mut query: Query<
         (Entity, &ShapeHits, &Rotation, Option<&MaxSlopeAngle>),
-        With<CharacterController>,
+        (With<CharacterController>, Without<FlyMode>),
     >,
 ) {
     for (entity, hits, rotation, max_slope_angle) in &mut query {
@@ -121,17 +115,43 @@ pub(super) fn update_grounded(
 
 /// Responds to [`MovementAction`] events and moves character controllers accordingly.
 pub(super) fn movement(
+    mut commands: Commands,
     time: Res<Time>,
     mut movement_event_reader: EventReader<MovementAction>,
-    mut controllers: Query<(&Speed, &JumpImpulse, &mut LinearVelocity, Has<Grounded>)>,
+    mut controllers: Query<(
+        Entity,
+        &Speed,
+        &JumpImpulse,
+        &mut LinearVelocity,
+        Has<Grounded>,
+        Has<FlyMode>,
+        Has<Crouched>,
+        Has<Sprinting>,
+    )>,
 ) {
     // Precision is adjusted so that the example works with
     // both the `f32` and `f64` features. Otherwise you don't need this.
     let delta_time = time.delta_seconds_f64().adjust_precision();
 
-    for event in movement_event_reader.read() {
-        for (speed, jump_impulse, mut linear_velocity, is_grounded) in &mut controllers {
+    for (
+        player_entity,
+        speed,
+        jump_impulse,
+        mut linear_velocity,
+        is_grounded,
+        is_flying,
+        is_crouched,
+        is_sprinting,
+    ) in &mut controllers
+    {
+        if is_crouched && is_flying {
+            linear_velocity.y = -jump_impulse.0 * 1.4;
+        }
+        for event in movement_event_reader.read() {
             match event {
+                MovementAction::Nop if is_sprinting => {
+                    commands.entity(player_entity).remove::<Sprinting>();
+                }
                 MovementAction::Move(direction) => {
                     // linear_velocity.x += direction.x * speed.0 * delta_time;
                     // linear_velocity.z += direction.z * speed.0 * delta_time;
@@ -140,10 +160,26 @@ pub(super) fn movement(
                     linear_velocity.z = tmp.z;
                 }
                 MovementAction::Jump => {
-                    if is_grounded {
+                    if is_grounded || is_flying {
                         linear_velocity.y = jump_impulse.0;
                     }
                 }
+                MovementAction::CrouchStart | MovementAction::CrouchStop => {
+                    if is_crouched {
+                        commands.entity(player_entity).remove::<Crouched>();
+                    } else {
+                        commands.entity(player_entity).insert(Crouched);
+                    }
+                }
+                MovementAction::SprintStart => {
+                    if is_sprinting {
+                        commands.entity(player_entity).remove::<Sprinting>();
+                    } else {
+                        commands.entity(player_entity).insert(Sprinting);
+                    }
+                }
+                MovementAction::SprintStop => {}
+                MovementAction::Nop => {}
             }
         }
     }
@@ -153,12 +189,39 @@ pub(super) fn movement(
 /// the moment he stops, the movement dampning will slowly push the velocity towards 0.
 /// This provides a friction-like effect.
 pub(super) fn apply_dampning(
-    mut movement: Query<(&mut LinearVelocity, &MovementDampingFactor, Has<Grounded>)>,
+    mut movement: Query<(
+        &mut LinearVelocity,
+        &mut Speed,
+        Has<Grounded>,
+        Has<FlyMode>,
+        Has<Crouched>,
+        Has<Sprinting>,
+    )>,
 ) {
-    for (mut linear_velocity, dampning, grounded) in movement.iter_mut() {
-        let factor = if grounded { 1.0 } else { 1.4 };
-        linear_velocity.x *= dampning.0.powf(factor);
-        linear_velocity.z *= dampning.0.powf(factor);
+    for (mut linear_velocity, mut speed, grounded, is_flying, is_crouched, is_sprinting) in
+        movement.iter_mut()
+    {
+        let mut total_multiplier = 1.0;
+        if is_crouched {
+            total_multiplier *= CROUCH_SPEED_SCALER;
+        }
+        if is_sprinting {
+            total_multiplier *= SPRINT_SPEED_SCALER;
+        }
+        if is_flying {
+            total_multiplier *= FLYING_SPEED_SCALER;
+        }
+
+        speed.0 = total_multiplier * SPEED;
+
+        let factor = if grounded && !is_flying { 1.0 } else { 0.96 };
+
+        if is_flying {
+            **linear_velocity *= FLYING_DAMPING_FACTOR;
+        } else {
+            linear_velocity.x *= MOVEMENT_DAMPING_FACTOR.powf(factor);
+            linear_velocity.z *= MOVEMENT_DAMPING_FACTOR.powf(factor);
+        }
     }
 }
 
@@ -200,4 +263,31 @@ pub fn player_look(
 #[derive(Resource, Default)]
 pub struct LastPressedKeys {
     pub map: HashMap<KeyCode, Instant>,
+}
+
+/// Handle crouch and sprint. Fov and camera height is adjusted accordingly.
+pub(super) fn handle_crouch_sprint(
+    mut camera_query: Query<(&mut Projection, &mut Transform), With<PlayerCamera>>,
+    player_query: Query<(Has<Crouched>, Has<Sprinting>, &Children), With<PhysicalPlayer>>,
+) {
+    for (is_cruched, is_sprinting, player_children) in player_query.iter() {
+        for child in player_children {
+            if let Ok((mut projection, mut transform)) = camera_query.get_mut(*child) {
+                if let Projection::Perspective(ref mut perspective) = *projection {
+                    if is_cruched {
+                        transform.translation.y = CROUCH_CAMERA_HEIGHT_OFFSET;
+                        perspective.fov = CROUCH_FOV;
+                    } else {
+                        transform.translation.y = CAMERA_HEIGHT_OFFSET;
+                        perspective.fov = FOV;
+                    }
+                    if is_sprinting {
+                        perspective.fov = SPRINT_FOV;
+                    } else {
+                        perspective.fov = FOV;
+                    }
+                }
+            }
+        }
+    }
 }
