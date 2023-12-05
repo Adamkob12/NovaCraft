@@ -27,6 +27,43 @@ pub use controller::*;
 //                                         CONSTANTS
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+/// Velocity value threshold for the player to be sprinting
+pub const SPRINT_THRESHOLD: f32 = 0.1;
+/// Speed scaler when sprinting
+pub const SPRINT_SPEED_SCALER: f32 = 1.42;
+/// Speed scaler when coruching
+pub const CROUCH_SPEED_SCALER: f32 = 0.56;
+/// Speed of the player (speed of the player should be independant of framerate)
+pub const SPEED: f32 = 540.0;
+/// The maximum time (in seconds) that seperates the time of two clicks of the same key before it
+/// counts as a "double click"
+pub const DOUBLE_CLICK_MAX_SEP_TIME: f32 = 0.15;
+/// The movement damping factor is scaler amount that will be multiplied against the velocity each frame.
+pub const MOVEMENT_DAMPING_FACTOR: f32 = 0.60;
+/// The flying damping factor is scaler amount that will be multiplied against the velocity each frame when flying.
+pub const FLYING_DAMPING_FACTOR: f32 = 0.90;
+/// The velocity that a controller's subject will recieve at the moment of jumping.
+pub const JUMP_IMPULSE: f32 = 9.0;
+/// If the angle at the collision point between the controller's subject and the ground less than
+/// this value ([`MAX_SLOPE_ANGLE`]) - the subject would be treated as [`Grounded`]. else not.
+pub const MAX_SLOPE_ANGLE: f32 = PI * 2.0;
+/// Drag in this case is the exponent of [`MovementDampingFactor`] while the controller's subject
+/// is not grounded.
+pub const DRAG: i32 = 10;
+/// Scaler of the player's speed when flying
+pub const FLYING_SPEED_SCALER: f32 = 1.5;
+/// Default player speed when flying
+pub const FLYING_SPEED: f32 = SPEED * FLYING_SPEED_SCALER;
+/// Default SSAO quality level
+pub const SSAO_QUALITY_LEVEL: ScreenSpaceAmbientOcclusionQualityLevel =
+    ScreenSpaceAmbientOcclusionQualityLevel::High;
+/// Default fog color
+pub const FOG_COLOR: Color = Color::rgb(0.65, 0.95, 1.0);
+/// Default fog falloff
+pub const FOG_FALLOFF: FogFalloff = FogFalloff::Linear {
+    start: ((RENDER_DISTANCE - 2) * WIDTH as i32) as f32,
+    end: ((RENDER_DISTANCE + 1) * WIDTH as i32) as f32,
+};
 /// Starting position of the player
 pub const STARTING_POS: [f32; 3] = [0.0, HEIGHT as f32 + 5.0, 0.0];
 /// Starting chunk of the player
@@ -37,6 +74,10 @@ pub const STARTING_CHUNK: ChunkCords = ChunkCords::new(
 /// We don't want the camera to be exactly where the player's collider is, because that's the
 /// center of the collider. This constant offsets the camera's position to match eye level.
 pub const CAMERA_HEIGHT_OFFSET: f32 = 0.45;
+/// Camera offset while crouched
+pub const CROUCH_CAMERA_HEIGHT_OFFSET: f32 = CAMERA_HEIGHT_OFFSET * 0.35;
+/// Camera starting pos
+pub const CAMERA_STARTING_POS: [f32; 3] = [0.0, 0.0 + CAMERA_HEIGHT_OFFSET, 0.0];
 /// The "reach" of the player, what is the largest distance from the player that a block can be and
 /// the player can break it / interact with it.
 pub const MAX_INTERACTION_DISTANCE: f32 = 6.0;
@@ -44,6 +85,10 @@ pub const MAX_INTERACTION_DISTANCE: f32 = 6.0;
 pub const SMALL_TRAVERSE: f32 = 0.001;
 /// Default Field of view
 pub const FOV: f32 = PI / 3.0;
+/// FOV while croching
+pub const CROUCH_FOV: f32 = FOV * 0.97;
+/// FOV while sprinting
+pub const SPRINT_FOV: f32 = FOV * 1.05;
 /// Distance which after the camera won't render anything
 pub const FAR: f32 = (RENDER_DISTANCE + 3) as f32 * WIDTH as f32;
 /// Default player collider height
@@ -55,7 +100,7 @@ pub const PLAYER_FRICTION: Friction = Friction::ZERO;
 /// Default player restitution
 pub const PLAYER_RESTITUTION: Restitution = Restitution::ZERO;
 /// Default player gravity scale
-pub const PLAYER_GRAVITY_SCALE: GravityScale = GravityScale(2.4);
+pub const PLAYER_GRAVITY_SCALE: GravityScale = GravityScale(3.5);
 /// Flymode gravity scale
 pub const FLYMODE_GRAVITY_SCALE: GravityScale = GravityScale(0.0);
 /// Default player collision groups
@@ -86,7 +131,21 @@ pub fn build_player_collision_layers() -> CollisionLayers {
 pub fn build_spectator_collision_layers() -> CollisionLayers {
     CollisionLayers::new(SPECTATOR_GROUPS, SPECTATOR_MASKS)
 }
-
+/// Default TAA
+#[allow(non_snake_case)]
+fn TAA() -> TemporalAntiAliasBundle {
+    TemporalAntiAliasBundle::default()
+}
+/// Default SSAO as function
+#[allow(non_snake_case)]
+fn SSAO() -> ScreenSpaceAmbientOcclusionBundle {
+    ScreenSpaceAmbientOcclusionBundle {
+        settings: ScreenSpaceAmbientOcclusionSettings {
+            quality_level: SSAO_QUALITY_LEVEL,
+        },
+        ..Default::default()
+    }
+}
 /// This component marks the entity of the player's camera.
 #[derive(Component)]
 pub struct PlayerCamera;
@@ -99,7 +158,7 @@ pub struct PhysicalPlayer;
 /// The gamemode of a player, each gamemode allows the player different things, gives him different
 /// options. Foe example, [`Spectator`](PlayerGameMode::Spectator) allows him to fly through walls.
 /// Mostly parralel to Minecraft's gamemodes
-#[derive(Component)]
+#[derive(Component, Debug)]
 pub enum PlayerGameMode {
     Creative,
     Survival,
@@ -220,53 +279,80 @@ impl Default for MovementSettings {
     }
 }
 
+/// Physical player bundle
+#[derive(Bundle)]
+pub struct PhysicalPlayerBundle {
+    pub player: PhysicalPlayer,
+    pub spatial: SpatialBundle,
+    pub controller: CharacterControllerBundle,
+    pub friction: Friction,
+    pub restitution: Restitution,
+    pub gravity_scale: GravityScale,
+    pub collision_layers: CollisionLayers,
+    pub game_mode: PlayerGameMode,
+}
+
+impl Default for PhysicalPlayerBundle {
+    fn default() -> Self {
+        Self {
+            player: PhysicalPlayer,
+            spatial: SpatialBundle {
+                transform: Transform::from_translation(STARTING_POS.into()),
+                ..Default::default()
+            },
+            controller: CharacterControllerBundle::new(Collider::capsule(
+                PLAYER_COLLIDER_HEIGHT,
+                PLAYER_COLLIDER_RADIUS,
+            )),
+            friction: PLAYER_FRICTION.with_combine_rule(CoefficientCombine::Min),
+            restitution: PLAYER_RESTITUTION.with_combine_rule(CoefficientCombine::Min),
+            gravity_scale: PLAYER_GRAVITY_SCALE,
+            collision_layers: CollisionLayers::new(PLAYER_GROUPS, PLAYER_MASKS),
+            game_mode: PlayerGameMode::Creative,
+        }
+    }
+}
+
+/// Camera player bundle
+#[derive(Bundle)]
+pub struct PlayerCameraBundle {
+    pub camera: PlayerCamera,
+    pub camera_bundle: Camera3dBundle,
+    pub atmosphere: AtmosphereCamera,
+    pub fog: FogSettings,
+}
+
+impl Default for PlayerCameraBundle {
+    fn default() -> Self {
+        Self {
+            camera: PlayerCamera,
+            camera_bundle: Camera3dBundle {
+                transform: Transform::from_translation(CAMERA_STARTING_POS.into()),
+                projection: Projection::Perspective(PerspectiveProjection {
+                    fov: FOV,
+                    far: FAR,
+                    ..Default::default()
+                }),
+                ..Default::default()
+            },
+            atmosphere: AtmosphereCamera::default(),
+
+            fog: FogSettings {
+                color: FOG_COLOR,
+                falloff: FOG_FALLOFF,
+                ..Default::default()
+            },
+        }
+    }
+}
+
 /// Spawns the `Camera3dBundle` to be controlled
 fn setup_player(mut commands: Commands) {
-    let player_entity = commands
-        .spawn(PhysicalPlayer)
-        .insert(SpatialBundle {
-            transform: Transform::from_xyz(0.0, HEIGHT as f32 + 5.0, 0.0),
-            ..Default::default()
-        })
-        .insert(CharacterControllerBundle::new(Collider::capsule(
-            1.15, 0.42,
-        )))
-        .insert(Friction::ZERO.with_combine_rule(CoefficientCombine::Min))
-        .insert(Restitution::ZERO.with_combine_rule(CoefficientCombine::Min))
-        .insert(GravityScale(2.4))
-        .insert(CollisionLayers::new(
-            [RigidLayer::Player],
-            [RigidLayer::Ground],
-        ))
-        .id();
+    let player_entity = commands.spawn(PhysicalPlayerBundle::default()).id();
     let camera_entity = commands
-        .spawn(Camera3dBundle {
-            transform: Transform::from_xyz(0.0, CAMERA_HEIGHT_OFFSET, 0.0),
-            projection: Projection::Perspective(PerspectiveProjection {
-                fov: FOV,
-                far: (RENDER_DISTANCE + 3) as f32 * WIDTH.max(LENGTH) as f32,
-                ..Default::default()
-            }),
-            ..Default::default()
-        })
-        .insert(PlayerCamera)
-        .insert(PlayerGameMode::Creative)
-        .insert(AtmosphereCamera::default())
-        .insert(TemporalAntiAliasBundle::default())
-        .insert(ScreenSpaceAmbientOcclusionBundle {
-            settings: ScreenSpaceAmbientOcclusionSettings {
-                quality_level: ScreenSpaceAmbientOcclusionQualityLevel::High,
-            },
-            ..Default::default()
-        })
-        .insert(FogSettings {
-            color: Color::rgb(0.65, 0.95, 1.0),
-            falloff: FogFalloff::Linear {
-                start: ((RENDER_DISTANCE - 2) * WIDTH as i32) as f32,
-                end: ((RENDER_DISTANCE + 1) * WIDTH as i32) as f32,
-            },
-            ..Default::default()
-        })
+        .spawn(PlayerCameraBundle::default())
+        .insert(TAA())
+        .insert(SSAO())
         .id();
     commands
         .entity(player_entity)
@@ -332,6 +418,7 @@ fn update_target_block(
         }
     }
 }
+
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
@@ -341,7 +428,7 @@ impl Plugin for PlayerPlugin {
             .init_resource::<MovementSettings>()
             .init_resource::<TargetBlock>()
             .init_resource::<LastPressedKeys>()
-            .insert_resource(CurrentChunk([0, 0].into()))
+            .insert_resource(CurrentChunk(STARTING_CHUNK.into()))
             .add_systems(Startup, initial_grab_cursor)
             .add_systems(
                 Update,
@@ -356,13 +443,14 @@ impl Plugin for PlayerPlugin {
                 PostUpdate,
                 (
                     update_current_chunk,
+                    nullify_velocity_when_velocity_is_too_low,
                     cycle_game_mode,
                     update_player_according_to_gamemode,
+                    update_player_gravity,
+                    update_player_collision_layers,
                     (player_look, update_target_block).chain(),
                     cursor_grab,
                 ),
             );
     }
 }
-
-//

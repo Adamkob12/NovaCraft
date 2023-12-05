@@ -55,6 +55,7 @@ pub(super) fn cycle_game_mode(keys: Res<Input<KeyCode>>, mut player: Query<&mut 
     if keys.just_pressed(KeyCode::L) {
         if let Ok(mut game_mode) = player.get_single_mut() {
             game_mode.cycle();
+            println!("Game mode: {:?}", game_mode);
         }
     }
 }
@@ -86,6 +87,66 @@ pub(super) fn update_player_according_to_gamemode(
             if gamemode.must_noclip() {
                 commands.entity(player_entity).insert(NoClipMode);
             }
+        }
+    }
+}
+
+/// change the collision layers of the player in noclip mode, so that they don't collide with anything
+pub(super) fn update_player_collision_layers(
+    mut player_query: Query<(Has<NoClipMode>, &mut CollisionLayers)>,
+    added_noclip_query: Query<Entity, Added<NoClipMode>>,
+    mut removed_noclip: RemovedComponents<NoClipMode>,
+) {
+    for removed_noclip_entity in removed_noclip.read() {
+        if let Ok((has_noclip_mode, mut collision_layers)) =
+            player_query.get_mut(removed_noclip_entity)
+        {
+            if !has_noclip_mode {
+                *collision_layers = build_player_collision_layers();
+            }
+        }
+    }
+    for added_noclip_entity in added_noclip_query.iter() {
+        if let Ok((has_noclip_mode, mut collision_layers)) =
+            player_query.get_mut(added_noclip_entity)
+        {
+            if has_noclip_mode {
+                *collision_layers = build_spectator_collision_layers();
+            }
+        }
+    }
+}
+
+/// Set the gravity of the player to 0 when in fly mode
+pub(super) fn update_player_gravity(
+    mut player_query: Query<(Has<FlyMode>, &mut GravityScale)>,
+    added_fly_query: Query<Entity, Added<FlyMode>>,
+    mut removed_fly: RemovedComponents<FlyMode>,
+) {
+    for removed_fly_entity in removed_fly.read() {
+        if let Ok((has_fly_mode, mut gravity)) = player_query.get_mut(removed_fly_entity) {
+            if !has_fly_mode {
+                *gravity = PLAYER_GRAVITY_SCALE;
+            }
+        }
+    }
+    for added_fly_entity in added_fly_query.iter() {
+        if let Ok((has_fly_mode, mut gravity)) = player_query.get_mut(added_fly_entity) {
+            if has_fly_mode {
+                *gravity = FLYMODE_GRAVITY_SCALE;
+            }
+        }
+    }
+}
+
+/// Disable sprinting when velocity is too low.
+/// If the velocity is under a certain threshold, set it to 0, and remove the sprinting component.
+pub(super) fn nullify_velocity_when_velocity_is_too_low(
+    mut player_query: Query<&mut LinearVelocity>,
+) {
+    for mut velocity in player_query.iter_mut() {
+        if velocity.length() < SPRINT_THRESHOLD {
+            **velocity = Vec3::ZERO;
         }
     }
 }

@@ -2,26 +2,9 @@
 
 pub mod movement;
 
-pub use super::{PhysicalPlayer, PlayerGameMode, CAMERA_HEIGHT_OFFSET, FOV};
-use bevy::prelude::*;
-use bevy_xpbd_3d::{math::*, prelude::*};
+pub use super::*;
+use bevy_xpbd_3d::math::*;
 pub use movement::*;
-
-/// Speed of the player (speed of the player should be independant of framerate)
-pub const SPEED: f32 = 500.0;
-/// The maximum time (in seconds) that seperates the time of two clicks of the same key before it
-/// counts as a "double click"
-pub const DOUBLE_CLICK_MAX_SEP_TIME: f32 = 0.22;
-/// The movement damping factor is scaler amount that will be multiplied against the velocity each frame.
-pub const MOVEMENT_DAMPING_FACTOR: f32 = 0.72;
-/// The velocity that a controller's subject will recieve at the moment of jumping.
-pub const JUMP_IMPULSE: f32 = 8.0;
-/// If the angle at the collision point between the controller's subject and the ground less than
-/// this value ([`MAX_SLOPE_ANGLE`]) - the subject would be treated as [`Grounded`]. else not.
-pub const MAX_SLOPE_ANGLE: f32 = PI * 2.0;
-/// Drag in this case is the exponent of [`MovementDampingFactor`] while the controller's subject
-/// is not grounded.
-pub const DRAG: i32 = 10;
 
 pub struct CharacterControllerPlugin;
 
@@ -29,7 +12,12 @@ pub struct CharacterControllerPlugin;
 #[derive(Event)]
 pub enum MovementAction {
     Move(Vec3),
+    Nop,
     Jump,
+    CrouchStart,
+    CrouchStop,
+    SprintStart,
+    SprintStop,
 }
 
 /// Marker component for flying
@@ -50,11 +38,15 @@ pub struct CharacterController;
 pub struct Grounded;
 /// The acceleration used for character movement.
 #[derive(Component)]
-pub struct Speed(Scalar);
+pub struct Speed(pub Scalar);
 
-/// The damping factor used for slowing down movement.
+/// Marker component for Crouching
 #[derive(Component)]
-pub struct MovementDampingFactor(Scalar);
+pub struct Crouched;
+
+/// Marker component for Sprinting
+#[derive(Component)]
+pub struct Sprinting;
 
 /// The strength of a jump.
 #[derive(Component)]
@@ -82,21 +74,14 @@ pub struct CharacterControllerBundle {
 #[derive(Bundle)]
 pub struct MovementBundle {
     speed: Speed,
-    dampning: MovementDampingFactor,
     jump_impulse: JumpImpulse,
     max_slope_angle: MaxSlopeAngle,
 }
 
 impl MovementBundle {
-    pub const fn new(
-        speed: Scalar,
-        dampning: Scalar,
-        jump_impulse: Scalar,
-        max_slope_angle: Scalar,
-    ) -> Self {
+    pub const fn new(speed: Scalar, jump_impulse: Scalar, max_slope_angle: Scalar) -> Self {
         Self {
             speed: Speed(speed),
-            dampning: MovementDampingFactor(dampning),
             jump_impulse: JumpImpulse(jump_impulse),
             max_slope_angle: MaxSlopeAngle(max_slope_angle),
         }
@@ -105,12 +90,7 @@ impl MovementBundle {
 
 impl Default for MovementBundle {
     fn default() -> Self {
-        Self::new(
-            SPEED,
-            MOVEMENT_DAMPING_FACTOR,
-            JUMP_IMPULSE,
-            MAX_SLOPE_ANGLE,
-        )
+        Self::new(SPEED, JUMP_IMPULSE, MAX_SLOPE_ANGLE)
     }
 }
 
@@ -142,11 +122,10 @@ impl CharacterControllerBundle {
     pub fn with_movement(
         mut self,
         speed: Scalar,
-        dampning: Scalar,
         jump_impulse: Scalar,
         max_slope_angle: Scalar,
     ) -> Self {
-        self.movement = MovementBundle::new(speed, dampning, jump_impulse, max_slope_angle);
+        self.movement = MovementBundle::new(speed, jump_impulse, max_slope_angle);
         self
     }
 }
@@ -161,6 +140,7 @@ impl Plugin for CharacterControllerPlugin {
                 apply_deferred,
                 movement,
                 apply_dampning,
+                handle_crouch_sprint,
             )
                 .chain(),
         );
