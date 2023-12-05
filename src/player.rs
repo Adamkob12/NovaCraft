@@ -23,6 +23,17 @@ use bevy_xpbd_3d::prelude::Collider;
 use bevy_xpbd_3d::prelude::*;
 pub use controller::*;
 
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//                                         CONSTANTS
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+/// Starting position of the player
+pub const STARTING_POS: [f32; 3] = [0.0, HEIGHT as f32 + 5.0, 0.0];
+/// Starting chunk of the player
+pub const STARTING_CHUNK: ChunkCords = ChunkCords::new(
+    STARTING_POS[0] as i32 / WIDTH as i32,
+    STARTING_POS[2] as i32 / LENGTH as i32,
+);
 /// We don't want the camera to be exactly where the player's collider is, because that's the
 /// center of the collider. This constant offsets the camera's position to match eye level.
 pub const CAMERA_HEIGHT_OFFSET: f32 = 0.45;
@@ -33,16 +44,52 @@ pub const MAX_INTERACTION_DISTANCE: f32 = 6.0;
 pub const SMALL_TRAVERSE: f32 = 0.001;
 /// Default Field of view
 pub const FOV: f32 = PI / 3.0;
+/// Distance which after the camera won't render anything
+pub const FAR: f32 = (RENDER_DISTANCE + 3) as f32 * WIDTH as f32;
+/// Default player collider height
+pub const PLAYER_COLLIDER_HEIGHT: f32 = 1.15;
+/// Default player collider radius
+pub const PLAYER_COLLIDER_RADIUS: f32 = 0.42;
+/// Default player fricition
+pub const PLAYER_FRICTION: Friction = Friction::ZERO;
+/// Default player restitution
+pub const PLAYER_RESTITUTION: Restitution = Restitution::ZERO;
+/// Default player gravity scale
+pub const PLAYER_GRAVITY_SCALE: GravityScale = GravityScale(2.4);
+/// Flymode gravity scale
+pub const FLYMODE_GRAVITY_SCALE: GravityScale = GravityScale(0.0);
+/// Default player collision groups
+pub const PLAYER_GROUPS: &[RigidLayer] = &[RigidLayer::Player];
+/// Default player collision masks
+pub const PLAYER_MASKS: &[RigidLayer] = &[RigidLayer::Ground];
+/// Default collision groups in spectator mode
+pub const SPECTATOR_GROUPS: &[RigidLayer] = &[RigidLayer::Spectator];
+/// Default collision masks in spectator mode
+pub const SPECTATOR_MASKS: &[RigidLayer] = &[];
+/// Build player collider
+pub fn build_player_collider() -> Collider {
+    Collider::capsule(PLAYER_COLLIDER_HEIGHT, PLAYER_COLLIDER_RADIUS)
+}
+/// Build player fricition
+pub fn build_player_friction() -> Friction {
+    PLAYER_FRICTION.with_combine_rule(CoefficientCombine::Min)
+}
+/// Build player restitution
+pub fn build_player_restitution() -> Restitution {
+    PLAYER_RESTITUTION.with_combine_rule(CoefficientCombine::Min)
+}
+/// Build player collision layers
+pub fn build_player_collision_layers() -> CollisionLayers {
+    CollisionLayers::new(PLAYER_GROUPS, PLAYER_MASKS)
+}
+/// Build spectator collision layers
+pub fn build_spectator_collision_layers() -> CollisionLayers {
+    CollisionLayers::new(SPECTATOR_GROUPS, SPECTATOR_MASKS)
+}
 
 /// This component marks the entity of the player's camera.
 #[derive(Component)]
 pub struct PlayerCamera;
-
-/// Keeps track of mouse motion events, pitch, and yaw
-#[derive(Resource, Default)]
-pub struct InputState {
-    reader_motion: ManualEventReader<MouseMotion>,
-}
 
 /// This component marks the entity of the player's physical entity, all of its physics related
 /// components are in the same entity. ([`Collider`], [`CollisionLayers`], [`GravityScale`], etc.)
@@ -55,15 +102,9 @@ pub struct PhysicalPlayer;
 #[derive(Component)]
 pub enum PlayerGameMode {
     Creative,
+    Survival,
+    Adventure,
     Spectator,
-}
-
-impl PlayerGameMode {
-    pub fn can_fly(&self) -> bool {
-        match self {
-            Self::Creative | Self::Spectator => true,
-        }
-    }
 }
 
 /// This resource represents the block that the player is currently looking at ("targeting")
@@ -78,12 +119,16 @@ pub struct TargetBlock {
     pub ray_direction: Vec3,
 }
 
+/// Keeps track of mouse motion events, pitch, and yaw
+#[derive(Resource, Default)]
+pub struct InputState {
+    reader_motion: ManualEventReader<MouseMotion>,
+}
 /// Mouse sensitivity and movement speed
 #[derive(Resource)]
 pub struct MovementSettings {
     pub sensitivity: f32,
 }
-
 /// An enum of all the possible physics layers in the world. A [`PhysicsLayer`] is a physical
 /// attribute that allows [`Physical Queries made by the physics engine`](`SpatialQuery`) to filter
 /// out specific colliders. For example, the players shouldn't collide with grass, so we might
@@ -93,10 +138,65 @@ pub struct MovementSettings {
 #[derive(PhysicsLayer, Copy, Clone)]
 pub enum RigidLayer {
     Player,
+    Spectator,
     FallingBlock,
     Ground,
     GroundNonCollidable,
     GroundNonBreakable,
+}
+
+impl PlayerGameMode {
+    pub fn can_fly(&self) -> bool {
+        match self {
+            Self::Creative | Self::Spectator => true,
+            Self::Survival | Self::Adventure => false,
+        }
+    }
+
+    pub fn must_fly(&self) -> bool {
+        match self {
+            Self::Spectator => true,
+            Self::Creative | Self::Survival | Self::Adventure => false,
+        }
+    }
+
+    pub fn can_noclip(&self) -> bool {
+        match self {
+            Self::Spectator => true,
+            Self::Creative => false,
+            Self::Survival | Self::Adventure => false,
+        }
+    }
+
+    pub fn must_noclip(&self) -> bool {
+        match self {
+            Self::Spectator => true,
+            Self::Creative => false,
+            Self::Survival | Self::Adventure => false,
+        }
+    }
+
+    pub fn can_break_blocks(&self) -> bool {
+        match self {
+            Self::Creative => true,
+            Self::Spectator => false,
+            Self::Adventure => false,
+            Self::Survival => true,
+        }
+    }
+
+    pub fn cycle(&mut self) {
+        match self {
+            Self::Creative => *self = Self::Spectator,
+            Self::Spectator => *self = Self::Adventure,
+            Self::Survival => *self = Self::Creative,
+            Self::Adventure => *self = Self::Survival,
+        }
+    }
+
+    pub fn set(&mut self, mode: Self) {
+        *self = mode;
+    }
 }
 
 impl Default for TargetBlock {
@@ -150,7 +250,6 @@ fn setup_player(mut commands: Commands) {
             ..Default::default()
         })
         .insert(PlayerCamera)
-        .insert(FlyMode::off())
         .insert(PlayerGameMode::Creative)
         .insert(AtmosphereCamera::default())
         .insert(TemporalAntiAliasBundle::default())
@@ -174,6 +273,7 @@ fn setup_player(mut commands: Commands) {
         .push_children(&[camera_entity]);
 }
 
+/// Updatees the target block, the block that the player is currently looking at
 fn update_target_block(
     mut target_block: ResMut<TargetBlock>,
     camera_rotation_transform: Query<&Transform, With<PlayerCamera>>,
@@ -256,6 +356,8 @@ impl Plugin for PlayerPlugin {
                 PostUpdate,
                 (
                     update_current_chunk,
+                    cycle_game_mode,
+                    update_player_according_to_gamemode,
                     (player_look, update_target_block).chain(),
                     cursor_grab,
                 ),

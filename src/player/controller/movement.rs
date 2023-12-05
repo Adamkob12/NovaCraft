@@ -1,19 +1,17 @@
-// REFACTORED
-
 use super::*;
-use super::{PhysicalPlayer, PlayerGameMode, CAMERA_HEIGHT_OFFSET, FOV};
+use super::{PlayerGameMode, CAMERA_HEIGHT_OFFSET, FOV};
 use crate::player::*;
 use bevy::{ecs::query::Has, prelude::*, utils::HashMap, utils::Instant};
 use bevy_xpbd_3d::{math::*, prelude::*};
 
 /// Sends [`MovementAction`] events based on keyboard input.
 pub(super) fn keyboard_input(
+    mut commands: Commands,
     mut movement_event_writer: EventWriter<MovementAction>,
     keyboard_input: Res<Input<KeyCode>>,
     mut camera_query: Query<(&mut Projection, &mut Transform), With<PlayerCamera>>,
     mut speed_query: Query<&mut Speed>,
-    mut physical_player: Query<&mut FlyMode, With<PhysicalPlayer>>,
-    player_game_mode: Query<&PlayerGameMode>,
+    gamemode_query: Query<(Entity, &PlayerGameMode, Has<FlyMode>)>,
     mut press_history: ResMut<LastPressedKeys>,
 ) {
     let up = keyboard_input.any_pressed([KeyCode::W, KeyCode::Up]);
@@ -36,17 +34,21 @@ pub(super) fn keyboard_input(
 
     if keyboard_input.pressed(KeyCode::Space) {
         movement_event_writer.send(MovementAction::Jump);
-        // Handle double-click on space bar for fly mode
-        if player_game_mode.get_single().unwrap().can_fly() {
+    }
+    if keyboard_input.just_pressed(KeyCode::Space) {
+        if let Ok((player_entity, player_game_mode, is_flying)) = gamemode_query.get_single() {
             if let Some(last_press) = press_history.map.get(&KeyCode::Space) {
                 if last_press.elapsed().as_secs_f32() <= DOUBLE_CLICK_MAX_SEP_TIME {
-                    physical_player
-                        .iter_mut()
-                        .for_each(|mut flymode| flymode.toggle());
+                    if is_flying && !player_game_mode.must_fly() {
+                        commands.entity(player_entity).remove::<FlyMode>();
+                    }
+                    if !is_flying && player_game_mode.can_fly() {
+                        commands.entity(player_entity).insert(FlyMode);
+                    }
                 }
-                press_history.map.insert(KeyCode::Space, Instant::now());
             }
         }
+        press_history.map.insert(KeyCode::Space, Instant::now());
     }
 
     // Sprint, Crouch

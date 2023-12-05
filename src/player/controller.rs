@@ -11,7 +11,7 @@ pub use movement::*;
 pub const SPEED: f32 = 500.0;
 /// The maximum time (in seconds) that seperates the time of two clicks of the same key before it
 /// counts as a "double click"
-pub const DOUBLE_CLICK_MAX_SEP_TIME: f32 = 0.5;
+pub const DOUBLE_CLICK_MAX_SEP_TIME: f32 = 0.22;
 /// The movement damping factor is scaler amount that will be multiplied against the velocity each frame.
 pub const MOVEMENT_DAMPING_FACTOR: f32 = 0.72;
 /// The velocity that a controller's subject will recieve at the moment of jumping.
@@ -21,7 +21,7 @@ pub const JUMP_IMPULSE: f32 = 8.0;
 pub const MAX_SLOPE_ANGLE: f32 = PI * 2.0;
 /// Drag in this case is the exponent of [`MovementDampingFactor`] while the controller's subject
 /// is not grounded.
-// pub const DRAG: i32 = 10;
+pub const DRAG: i32 = 10;
 
 pub struct CharacterControllerPlugin;
 
@@ -33,22 +33,12 @@ pub enum MovementAction {
 }
 
 /// Marker component for flying
-#[derive(Component)]
-pub struct FlyMode(bool);
+#[derive(Component, Debug)]
+pub struct FlyMode;
 
-impl FlyMode {
-    pub fn off() -> Self {
-        Self(false)
-    }
-
-    pub fn on() -> Self {
-        Self(true)
-    }
-
-    pub fn toggle(&mut self) {
-        self.0 = !self.0
-    }
-}
+/// Marker component for no clip
+#[derive(Component, Debug)]
+pub struct NoClipMode;
 
 /// A marker component indicating that an entity is using a character controller.
 #[derive(Component)]
