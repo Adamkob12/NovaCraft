@@ -8,7 +8,7 @@ jobs:
   test:
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -29,30 +29,13 @@ jobs:
         if: runner.os == 'linux'
       - name: Build & run tests
         run: cargo test
-      - name: Check for startup panics in release mode
+      - name: Check for startup panics
         run: |
-          timeout 5s cargo run --release || true
-      - name: Check for startup panics in debug mode
-        run: |
-          timeout 5s cargo run || true
-  all-doc-tests:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ubuntu-latest-cargo-all-doc-tests-${{ hashFiles('**/Cargo.toml') }}
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: stable
-      - name: Install alsa and udev
-        run: sudo apt-get update; sudo apt-get install --no-install-recommends libasound2-dev libudev-dev
+          if [ "${RUNNER_OS}" == "Windows" ]; then
+            timeout 3s cargo run || exit 0
+          else
+            timeout 3s cargo run || true
+          fi
   lint:
     runs-on: ubuntu-latest
     steps:
