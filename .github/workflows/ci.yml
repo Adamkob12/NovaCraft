@@ -30,12 +30,9 @@ jobs:
       - name: Build & run tests
         run: cargo test
       - name: Check for startup panics
-        run: |
-          if [ "${RUNNER_OS}" == "Windows" ]; then
-            timeout 3s cargo run || exit 0
-          else
-            timeout 3s cargo run || true
-          fi
+        run:  timeout 3s cargo run || true
+        if: runner.os == 'linux'
+          
   lint:
     runs-on: ubuntu-latest
     steps:
